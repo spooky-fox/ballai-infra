@@ -6,6 +6,8 @@ on:
     paths:
       - "**.tf"
       - ".github/workflows/terraform-pr.yml"
+      - ".pre-commit-config.yaml"
+      - ".tflint.hcl"
 
 permissions:
   contents: read
@@ -16,7 +18,7 @@ concurrency:
 
 jobs:
   terraform:
-    name: ${{ matrix.workspace }} — fmt / validate / plan
+    name: ${{ matrix.workspace }} — fmt / validate / lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -28,14 +30,33 @@ jobs:
       run:
         working-directory: ${{ matrix.workspace }}
     env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-west-2
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
+
+      - name: Install pre-commit
+        run: python -m pip install --upgrade pip pre-commit
+        working-directory: ${{ github.workspace }}
+
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files --show-diff-on-failure
+        working-directory: ${{ github.workspace }}
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
@@ -46,6 +67,3 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate -no-color
-
-      - name: Terraform Plan
-        run: terraform plan -no-color -input=false

@@ -55,7 +55,7 @@ jobs:
         run: terraform plan -input=false -out=tfplan
 
       - name: Preflight destructive change check
-        run: "${GITHUB_WORKSPACE}/scripts/terraform-preflight.sh" check-plan tfplan
+        run: ${GITHUB_WORKSPACE}/scripts/terraform-preflight.sh check-plan tfplan
         env:
           TERRAFORM_DESTRUCTIVE_ALLOWLIST: "339713066518"
 
