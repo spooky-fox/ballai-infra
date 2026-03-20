@@ -15,20 +15,16 @@ fi
 ALLOWLIST="${TERRAFORM_DESTRUCTIVE_ALLOWLIST:-339713066518}"
 ACCOUNT_ID="$(aws sts get-caller-identity --query 'Account' --output text)"
 
-HAS_DESTRUCTIVE="$(python3 - "$PLAN_FILE" <<'PY'
-import json, sys
+HAS_DESTRUCTIVE="$(
+  terraform show -json "$PLAN_FILE" | python3 -c '
+import json
+import sys
 
-with open(sys.argv[1], "r", encoding="utf-8") as f:
-    plan = json.load(f)
+plan = json.load(sys.stdin)
 changes = plan.get("resource_changes", [])
-destructive = False
-for rc in changes:
-    actions = rc.get("change", {}).get("actions", [])
-    if "delete" in actions:
-        destructive = True
-        break
+destructive = any("delete" in rc.get("change", {}).get("actions", []) for rc in changes)
 print("true" if destructive else "false")
-PY
+'
 )"
 
 if [ "$HAS_DESTRUCTIVE" != "true" ]; then
