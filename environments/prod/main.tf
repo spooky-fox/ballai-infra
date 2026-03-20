@@ -12,7 +12,7 @@ module "github_actions_runners" {
   name_prefix           = "${var.name_prefix}-gha"
   github_owner          = var.github_owner
   runner_group_id       = var.github_runner_group_id
-  org_registration_name = var.github_owner
+  org_registration_name = ""
 
   repositories = {
     ballai = {
