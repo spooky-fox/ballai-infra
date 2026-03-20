@@ -1,0 +1,18 @@
+---
+description: Always use local .env AWS credentials
+alwaysApply: true
+---
+
+# AWS Credentials Source
+
+Use AWS credentials from the repo-local `.env` file for this project.
+
+Before any AWS command:
+
+1. `set -a && source .env && set +a`
+2. `unset AWS_PROFILE AWS_CONFIG_FILE AWS_SHARED_CREDENTIALS_FILE`
+3. `aws sts get-caller-identity`
+
+Do not use named AWS profiles unless the user explicitly asks.
+
+For write operations, always verify the account ID in `aws sts get-caller-identity` first.
