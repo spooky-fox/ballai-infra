@@ -10,6 +10,30 @@ variable "name_prefix" {
   default     = "ballai"
 }
 
+variable "aws_region" {
+  type        = string
+  description = "AWS region for infrastructure resources."
+  default     = "us-west-2"
+}
+
+variable "enable_github_actions_runners" {
+  type        = bool
+  description = "Enable AWS CodeBuild managed GitHub Actions runner infrastructure."
+  default     = true
+}
+
+variable "github_owner" {
+  type        = string
+  description = "GitHub owner/org where runner projects are used."
+  default     = "spooky-fox"
+}
+
+variable "github_runner_group_id" {
+  type        = number
+  description = "GitHub runner group id used for registration."
+  default     = 1
+}
+
 # Optional: wire explicitly instead of env-only token
 # variable "cloudflare_api_token" {
 #   type        = string
