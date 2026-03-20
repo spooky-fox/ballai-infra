@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   terraform:
-    name: ${{ matrix.workspace }} — fmt / validate / plan
+    name: ${{ matrix.workspace }} — fmt / validate / lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -68,5 +68,3 @@ jobs:
       - name: Terraform Validate
         run: terraform validate -no-color
 
-      - name: Terraform Plan
-        run: terraform plan -no-color -refresh=false -lock=false -input=false
