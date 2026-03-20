@@ -8,7 +8,7 @@ Terraform for [Ballai](https://github.com/spooky-fox/Ballai) and related Cloudfl
 |------|--------|
 | Ballai Worker / KV / D1 / Durable Objects | **Scaffold** — `modules/ballai-worker/` is a placeholder until Wrangler resources are mapped |
 | **lanzo-web** (Cloudflare zone, Pages, DNS, email routing) | **Migrated** — root module at `environments/prod/lanzo-web/` (was `lanzo-web/infra/`). Provider **`cloudflare` ~> 5.x** in that directory (Ballai prod remains ~> 4.x until upgraded). |
-| Remote state | Per root module: copy `backend.tf.example` → `backend.tf` in each environment you apply (**separate state keys** for Ballai vs lanzo-web). |
+| Remote state | **Configured** on S3 bucket `together-terraform-state` with separate keys: `prod/us-west-2/ballai/terraform.tfstate` and `prod/us-west-2/lanzo-web/terraform.tfstate`. |
 
 ## Prerequisites
 
@@ -26,10 +26,9 @@ environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloud
 
 ## Next steps
 
-1. Add `backend.tf` per root module (distinct state keys; see `backend.tf.example` files).
-2. **State migration:** If lanzo Terraform state lived only in `lanzo-web`, move it to the remote backend for `environments/prod/lanzo-web/` using your usual process (`terraform state pull` / `push`, or migrate backend) before relying on CI apply — **do not duplicate applies** against two state files.
-3. Map Ballai Wrangler resources to `modules/ballai-worker/` when ready.
-4. Run `terraform fmt`, `terraform validate`, and `terraform plan` from each root directory before apply.
+1. Map Ballai Wrangler resources to `modules/ballai-worker/` when ready.
+2. Keep `lanzo-web/infra/` retired and manage lanzo only from `environments/prod/lanzo-web/`.
+3. Run `terraform fmt`, `terraform validate`, and `terraform plan` from each root directory before apply.
 
 ## CI
 

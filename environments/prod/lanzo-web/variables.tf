@@ -19,6 +19,6 @@ variable "pages_project_name" {
 variable "formspree_form_id" {
   type        = string
   description = "Formspree form ID for waitlist (e.g. from https://formspree.io/f/<id>)."
-  default     = ""
+  default     = "xgonnjjj"
   sensitive   = false
 }
