@@ -6,6 +6,7 @@ on:
     paths:
       - "**.tf"
       - ".github/workflows/terraform-apply.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -34,6 +35,13 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -input=false
+
+      - name: Require remote backend
+        run: |
+          if [ ! -f backend.tf ]; then
+            echo "backend.tf is missing. Configure remote state before apply."
+            exit 1
+          fi
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
