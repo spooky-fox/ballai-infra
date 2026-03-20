@@ -36,6 +36,24 @@ environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloud
 - **`main` branch:** apply for **each** matrix workspace that has `backend.tf`, using the **`production`** GitHub Environment.
 - Apply workflow now enforces a preflight guard that blocks destructive plans unless the active AWS account is allowlisted (`TERRAFORM_DESTRUCTIVE_ALLOWLIST`).
 
+## Terraform Quality Battery
+
+This repo uses community-standard Terraform hooks via [`pre-commit-terraform`](https://github.com/antonbabenko/pre-commit-terraform):
+
+- `terraform_fmt`
+- `terraform_validate`
+- `terraform_tflint`
+- `terraform_docs`
+- `terraform_providers_lock` (linux + macOS lock targets)
+
+Run locally:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
 ## Related
 
 - Application repos: [Ballai](https://github.com/spooky-fox/Ballai), [lanzo-web](https://github.com/spooky-fox/lanzo-web) (Terraform removed from `lanzo-web/infra/` in favor of this repo).
