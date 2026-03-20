@@ -34,6 +34,7 @@ environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloud
 
 - **Pull requests:** format check (repo-wide recursive), then **matrix**: `environments/prod` and `environments/prod/lanzo-web` — init, validate, plan (`.github/workflows/terraform-pr.yml`).
 - **`main` branch:** apply for **each** matrix workspace that has `backend.tf`, using the **`production`** GitHub Environment.
+- Apply workflow now enforces a preflight guard that blocks destructive plans unless the active AWS account is allowlisted (`TERRAFORM_DESTRUCTIVE_ALLOWLIST`).
 
 ## Related
 
