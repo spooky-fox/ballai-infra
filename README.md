@@ -43,7 +43,6 @@ This repo uses community-standard Terraform hooks via [`pre-commit-terraform`](h
 - `terraform_fmt`
 - `terraform_validate`
 - `terraform_tflint`
-- `terraform_docs`
 - `terraform_providers_lock` (linux + macOS lock targets)
 
 Run locally:
