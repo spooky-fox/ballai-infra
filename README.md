@@ -8,7 +8,7 @@ Terraform for [Ballai](https://github.com/spooky-fox/Ballai) and related Cloudfl
 |------|--------|
 | Ballai Worker / KV / D1 / Durable Objects | **Scaffold** — `modules/ballai-worker/` is a placeholder until Wrangler resources are mapped |
 | **lanzo-web** (Cloudflare zone, Pages, DNS, email routing) | **Migrated** — root module at `environments/prod/lanzo-web/` (was `lanzo-web/infra/`). Provider **`cloudflare` ~> 5.x** in that directory (Ballai prod remains ~> 4.x until upgraded). |
-| Remote state | **Configured** on S3 bucket `together-terraform-state` with separate keys: `prod/us-west-2/ballai/terraform.tfstate` and `prod/us-west-2/lanzo-web/terraform.tfstate`. |
+| Remote state | **Configured** on S3 bucket `terraform-spookyfox` with separate keys: `shared/ballai/prod/terraform.tfstate` and `shared/lanzo-web/prod/terraform.tfstate`. |
 
 ## Prerequisites
 

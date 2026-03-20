@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket  = "together-terraform-state"
-    key     = "prod/us-west-2/lanzo-web/terraform.tfstate"
-    region  = "us-west-2"
+    bucket  = "terraform-spookyfox"
+    key     = "shared/lanzo-web/prod/terraform.tfstate"
+    region  = "us-east-1"
     encrypt = true
   }
 }
