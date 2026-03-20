@@ -11,18 +11,23 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: terraform-apply-${{ github.repository }}
-  cancel-in-progress: false
-
 jobs:
   apply:
-    name: apply
+    name: apply (${{ matrix.workspace }})
     runs-on: ubuntu-latest
     environment: production
+    concurrency:
+      group: terraform-apply-${{ github.repository }}-${{ matrix.workspace }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace:
+          - environments/prod
+          - environments/prod/lanzo-web
     defaults:
       run:
-        working-directory: environments/prod
+        working-directory: ${{ matrix.workspace }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -39,7 +44,7 @@ jobs:
       - name: Require remote backend
         run: |
           if [ ! -f backend.tf ]; then
-            echo "backend.tf is missing. Configure remote state before apply."
+            echo "backend.tf is missing in ${PWD}. Configure remote state before apply."
             exit 1
           fi
 

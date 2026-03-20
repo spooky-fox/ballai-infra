@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (gitignored). Do not commit secrets.
+# API token: set CLOUDFLARE_API_TOKEN in the environment instead of a tfvars file.
+
+cloudflare_account_id = "your-cloudflare-account-id"
+domain                = "lanzo.app"
+pages_project_name    = "lanzo-web"
+# Optional waitlist form (Formspree public form id segment):
+# formspree_form_id  = "your-form-id"

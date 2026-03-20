@@ -1,41 +1,41 @@
 # ballai-infra
 
-Terraform scaffold for migrating [Ballai](https://github.com/spooky-fox/Ballai) Cloudflare infrastructure from **Wrangler** (`backend/wrangler.toml`) to Terraform.
+Terraform for [Ballai](https://github.com/spooky-fox/Ballai) and related Cloudflare infrastructure, including a migrated root module for **[lanzo-web](https://github.com/spooky-fox/lanzo-web)** (zone, Pages, DNS, email routing).
 
 ## Migration status
 
 | Area | Status |
 |------|--------|
-| This repo (Terraform scaffold) | Initial structure in place |
-| Worker / KV / D1 / Durable Objects | **Not yet defined in Terraform** — module is a placeholder |
-| **Ballai website / app repo split** | **Pending confirmation** — no assumptions made about moving the application repository; coordinate before any repo or deploy pipeline changes |
+| Ballai Worker / KV / D1 / Durable Objects | **Scaffold** — `modules/ballai-worker/` is a placeholder until Wrangler resources are mapped |
+| **lanzo-web** (Cloudflare zone, Pages, DNS, email routing) | **Migrated** — root module at `environments/prod/lanzo-web/` (was `lanzo-web/infra/`). Provider **`cloudflare` ~> 5.x** in that directory (Ballai prod remains ~> 4.x until upgraded). |
+| Remote state | Per root module: copy `backend.tf.example` → `backend.tf` in each environment you apply (**separate state keys** for Ballai vs lanzo-web). |
 
 ## Prerequisites
 
 - Terraform `>= 1.5`
-- Cloudflare API token with permissions appropriate for planned resources (store in GitHub Actions secrets for CI)
-- Remote state: copy `environments/prod/backend.tf.example` to `backend.tf`, fill in real values, and **do not commit** secrets
+- Cloudflare API token with permissions for planned resources (GitHub Actions: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` as `TF_VAR_cloudflare_account_id` where used)
+- Remote state: use `environments/prod/backend.tf.example` and `environments/prod/lanzo-web/backend.tf.example` as templates — **do not commit** secrets
 
 ## Layout
 
 ```text
-environments/prod/   # Production root module
-modules/ballai-worker/ # Reusable module (empty of resources until design is finalized)
+environments/prod/              # Ballai production root module (cloudflare ~> 4.x)
+modules/ballai-worker/          # Reusable module (placeholder)
+environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloudflare ~> 5.x)
 ```
 
 ## Next steps
 
-1. Confirm **remote backend** (S3, GCS, Terraform Cloud, etc.) and add `environments/prod/backend.tf` (see `backend.tf.example`).
-2. Map current Wrangler resources (Worker, KV `TOOL_CACHE`, D1 `ballai-travel`, Durable Object `ToolChainSession`, cron triggers) to `cloudflare_*` resources in `modules/ballai-worker/`.
-3. Add `terraform.tfvars` locally (gitignored) or use CI/CD variables — **never commit real tokens or private keys**.
-4. Wire GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, and any `TF_VAR_*` or account IDs your root module expects.
-5. Run `terraform fmt`, `terraform validate`, and `terraform plan` from `environments/prod` before the first apply.
+1. Add `backend.tf` per root module (distinct state keys; see `backend.tf.example` files).
+2. **State migration:** If lanzo Terraform state lived only in `lanzo-web`, move it to the remote backend for `environments/prod/lanzo-web/` using your usual process (`terraform state pull` / `push`, or migrate backend) before relying on CI apply — **do not duplicate applies** against two state files.
+3. Map Ballai Wrangler resources to `modules/ballai-worker/` when ready.
+4. Run `terraform fmt`, `terraform validate`, and `terraform plan` from each root directory before apply.
 
 ## CI
 
-- **Pull requests:** format check, validate, and plan (`.github/workflows/terraform-pr.yml`).
-- **`main` branch:** apply with the **`production`** GitHub Environment (configure protection rules + required secrets in repo settings).
+- **Pull requests:** format check (repo-wide recursive), then **matrix**: `environments/prod` and `environments/prod/lanzo-web` — init, validate, plan (`.github/workflows/terraform-pr.yml`).
+- **`main` branch:** apply for **each** matrix workspace that has `backend.tf`, using the **`production`** GitHub Environment.
 
 ## Related
 
-- Application repo: Ballai (Wrangler config today: `backend/wrangler.toml`).
+- Application repos: [Ballai](https://github.com/spooky-fox/Ballai), [lanzo-web](https://github.com/spooky-fox/lanzo-web) (Terraform removed from `lanzo-web/infra/` in favor of this repo).
