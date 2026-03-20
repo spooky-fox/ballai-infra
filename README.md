@@ -21,6 +21,7 @@ Terraform for [Ballai](https://github.com/spooky-fox/Ballai) and related Cloudfl
 ```text
 environments/prod/              # Ballai production root module (cloudflare ~> 4.x)
 modules/ballai-worker/          # Reusable module (placeholder)
+modules/github-actions-codebuild-runners/ # AWS CodeBuild managed GitHub Actions runners
 environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloudflare ~> 5.x)
 ```
 
@@ -35,6 +36,33 @@ environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloud
 - **Pull requests:** quality battery (`pre-commit` hooks for fmt/validate/tflint/provider lock) plus matrix init/validate checks for `environments/prod` and `environments/prod/lanzo-web` (`.github/workflows/terraform-pr.yml`).
 - **`main` branch:** apply for **each** matrix workspace that has `backend.tf`, using the **`production`** GitHub Environment.
 - Apply workflow now enforces a preflight guard that blocks destructive plans unless the active AWS account is allowlisted (`TERRAFORM_DESTRUCTIVE_ALLOWLIST`).
+
+## AWS GitHub Runners (On-Demand)
+
+This repo now provisions AWS CodeBuild managed, ephemeral GitHub Actions runners for:
+
+- `spooky-fox/ballai`
+- `spooky-fox/ballai-infra`
+- `spooky-fox/lanzo-web`
+
+Runner project names are built from:
+
+- `ballai-gha-ballai`
+- `ballai-gha-ballai-infra`
+- `ballai-gha-lanzo-web`
+
+Workflows target these with:
+
+- `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
+- Repos can bootstrap safely with `USE_CODEBUILD_RUNNERS=false` (default fallback to `ubuntu-latest`) and then flip to `true` after runner projects are ready.
+
+Important prerequisite: AWS account-level CodeBuild GitHub source credentials/connection must exist, or webhook/project setup will not be usable at runtime.
+
+### Observe and tune policy
+
+- Start with on-demand ephemeral only (no warm pool).
+- Monitor p95 `QueuedDuration` and p95 `Duration` alarms per runner project.
+- Consider daytime pre-warming only if queue latency remains high during working hours for at least one week.
 
 ## Terraform Quality Battery
 

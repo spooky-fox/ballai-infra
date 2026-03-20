@@ -19,7 +19,7 @@ concurrency:
 jobs:
   terraform:
     name: ${{ matrix.workspace }} — fmt / validate / lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.USE_CODEBUILD_RUNNERS == 'true' && format('codebuild-ballai-gha-ballai-infra-{0}-{1}', github.run_id, github.run_attempt) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
