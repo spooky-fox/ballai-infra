@@ -25,6 +25,16 @@ module "github_actions_runners" {
       description     = "Terraform CI and apply workflows"
       compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
+    "ballai-infra-prod" = {
+      repository_name = "ballai-infra"
+      description     = "Terraform workflows for environments/prod"
+      compute_type    = "BUILD_GENERAL1_MEDIUM"
+    }
+    "ballai-infra-lanzo-web" = {
+      repository_name = "ballai-infra"
+      description     = "Terraform workflows for environments/prod/lanzo-web"
+      compute_type    = "BUILD_GENERAL1_MEDIUM"
+    }
     "lanzo-web" = {
       repository_name = "lanzo-web"
       description     = "Website build/lint/test workflows"

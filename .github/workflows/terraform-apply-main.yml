@@ -14,7 +14,7 @@ permissions:
 jobs:
   apply:
     name: apply (${{ matrix.workspace }})
-    runs-on: ${{ vars.USE_CODEBUILD_RUNNERS == 'true' && format('codebuild-ballai-gha-ballai-infra-{0}-{1}', github.run_id, github.run_attempt) || 'ubuntu-latest' }}
+    runs-on: ${{ vars.USE_CODEBUILD_RUNNERS == 'true' && (matrix.workspace == 'environments/prod' && format('codebuild-ballai-gha-ballai-infra-prod-{0}-{1}', github.run_id, github.run_attempt) || format('codebuild-ballai-gha-ballai-infra-lanzo-web-{0}-{1}', github.run_id, github.run_attempt)) || 'ubuntu-latest' }}
     environment: production
     concurrency:
       group: terraform-apply-${{ github.repository }}-${{ matrix.workspace }}
