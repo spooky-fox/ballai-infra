@@ -23,7 +23,7 @@ environments/prod/              # Ballai production root module (cloudflare ~> 4
 modules/ballai-worker/          # Reusable module (placeholder)
 modules/github-actions-codebuild-runners/ # AWS CodeBuild managed GitHub Actions runners
 environments/prod/lanzo-web/    # lanzo.app / Pages / DNS / email routing (cloudflare ~> 5.x)
-ansible/                        # macOS self-hosted GitHub runner; ansible-core 2.20+ via `uv sync` in ansible/ (see ansible/README.md)
+ansible/                        # Self-hosted GitHub Actions runners (macOS/Linux) via MonolithProjects Galaxy role + Ballai extras; see ansible/README.md
 ```
 
 ## Next steps

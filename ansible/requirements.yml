@@ -1,0 +1,6 @@
+---
+# Third-party roles (install: ansible-galaxy role install -r requirements.yml).
+# Pinned release: https://github.com/MonolithProjects/ansible-github_actions_runner/releases
+roles:
+  - name: monolithprojects.github_actions_runner
+    version: 1.27.0

@@ -1,35 +1,65 @@
-# Ansible (macOS GitHub Actions runner)
+# Ansible (GitHub Actions self-hosted runners)
 
-Playbook to install the official [actions/runner](https://github.com/actions/runner) on a Mac and register it against a repository (default: `spooky-fox/ballai` with label `ballai-ci`).
+Provisions the official [actions/runner](https://github.com/actions/runner) on **macOS or Linux** using the Galaxy role **[monolithprojects.github_actions_runner](https://github.com/MonolithProjects/ansible-github_actions_runner)** (MonolithProjects), plus **Ballai-only** extras on macOS (Homebrew **gnu-tar** for `ansible.builtin.unarchive`, and **swiftlint** / **xcodegen** / **xcbeautify**).
 
-## Fully automated (no prompts)
+Default registration: repository **`spooky-fox/ballai`** with label **`ballai-ci`**, install dir **`$HOME/actions-runner`**.
 
-1. **Install toolchain:** `brew install uv` then `cd ansible && uv sync`
-2. **GitHub PAT on the controller** (the machine running Ansible), one of:
-   - Create **`ansible/github_token`** with a single line (`ghp_...`, repo admin). **`chmod 600`**. (Gitignored.)
-   - Or leave that file absent and set **`GITHUB_TOKEN`** in the environment.
-3. **Optional sudo password file:** **`ansible/become_password`** (single line, `chmod 600`) only if you add **`become: true`** tasks or use **`ansible-playbook -b`**. The stock playbook does not use `become` for the runner install.
-4. **Run:**
+## One-time setup
 
-```bash
-cd ansible
-uv run ansible-playbook -i inventory playbooks/github_actions_runner_mac.yml
-```
+1. **Toolchain:** `brew install uv` (on the controller), then `cd ansible && uv sync`
+2. **Install Galaxy dependencies** (roles + collections):
+
+   ```bash
+   cd ansible
+   uv run ansible-galaxy role install -r requirements.yml
+   uv run ansible-galaxy collection install -r collections/requirements.yml
+   ```
+
+   - Roles → **`ansible/.ansible/roles/`** (gitignored).
+   - Collections ( **`amazon.aws`** for optional Secrets Manager lookup) → **`ansible/.ansible/collections/`** (gitignored).
+
+3. **GitHub PAT on the controller** (the machine running Ansible), one of:
+   - **`ansible/github_token`** — single line (`ghp_...` or fine-grained token with repo access to manage runners). **`chmod 600`**. (Gitignored.)
+   - Or omit the file and set **`GITHUB_TOKEN`** or **`PERSONAL_ACCESS_TOKEN`** in the environment (Monolith’s usual name is `PERSONAL_ACCESS_TOKEN`; this playbook accepts either).
+
+4. **Sudo / become:** The Monolith role uses **`become: true`** to create `runner_dir`, unpack the tarball, and run `config.sh` as `runner_user`. On macOS, **`./svc.sh install` / `start`** still run **without** become (LaunchAgent).
+
+   Password resolution order (first hit wins):
+
+   1. **`github_actions_runner_become_password_file`** if you set it (path must exist).
+   2. **`ansible/.pw`** — single line, **`chmod 600`** (gitignored). See **`pw.example`**.
+   3. **`ansible/become_password`** — legacy filename, same format.
+   4. Environment **`ANSIBLE_BECOME_PASSWORD`**.
+   5. **AWS Secrets Manager** if **`BALLAI_ANSIBLE_BECOME_SECRET_ID`** is set (secret **name or ARN**; use a **plain string** secret for direct lookup, or run **`sync_ansible_secrets_from_aws.sh`** to materialize **`.pw`** from a JSON secret). Requires **`amazon.aws`** collection installed.
+
+   **Automation (AWS → local file):** from repo root, with **`BALLAI_ANSIBLE_BECOME_SECRET_ID`** set and AWS credentials loaded (e.g. **`set -a && source .env && set +a`**, then **`unset AWS_PROFILE AWS_CONFIG_FILE AWS_SHARED_CREDENTIALS_FILE`** per team conventions):
+
+   ```bash
+   cd ansible && ./scripts/sync_ansible_secrets_from_aws.sh
+   ```
+
+   Optional: secret value is JSON — set **`BALLAI_ANSIBLE_BECOME_SECRET_JSON_KEY`** to the field name (e.g. `password`) before running the script.
+
+   You can also use **`ansible-playbook --become-password-file=...`** or **`--ask-become-pass`**.
+
+5. **Run:**
+
+   ```bash
+   cd ansible
+   uv run ansible-playbook -i inventory playbooks/github_actions_runner.yml
+   ```
+
+   **`playbooks/github_actions_runner_mac.yml`** only **`import_playbook`**’s the file above (backward-compatible path).
 
 Copy examples: `cp github_token.example github_token` then replace the token; **`chmod 600 github_token`**.
 
-**Non-interactive behavior**
-
-- **`brew install gnu-tar`:** `HOMEBREW_NONINTERACTIVE=1`
-- **`./svc.sh`:** user **LaunchAgent** under `~/Library/LaunchAgents` — **no sudo**, do not use Ansible **`become`** on these tasks.
+**Inventory note:** The play targets **`github_runners:mac_runners`** (hosts in either group). If you only define `[github_runners]`, Ansible may warn that **`mac_runners`** did not match; that is harmless.
 
 ## Requirements
 
 - **Python 3.12+** and **ansible-core 2.20+** (see `pyproject.toml`). The play asserts Ansible’s version at runtime.
-- **uv** recommended: `brew install uv` — avoids Homebrew Python **PEP 668** issues.
-- **Alternative:** `python3 -m venv .venv` then `pip install -r requirements.txt` inside the venv.
-- Target must be **macOS** (arm64 or Intel).
-- **Homebrew** on the target for **gnu-tar** (required by `ansible.builtin.unarchive`).
+- **uv** recommended: `brew install uv`.
+- **Targets:** macOS (arm64 / Intel) or supported Linux distros (see the role README). **macOS** also needs **Homebrew**, **Xcode + CLT** for Ballai-style CI, and network access to GitHub.
 
 ## Inventory
 
@@ -37,30 +67,48 @@ Copy examples: `cp github_token.example github_token` then replace the token; **
 cp inventory.example inventory
 ```
 
+Use **`[github_runners]`** for new setups. You can keep **`[mac_runners]`** for older inventories; those hosts are still included.
+
+**Same-LAN Macs without fixed IPs:** set **`ansible_host=<LocalHostname>.local`** in inventory (Bonjour / mDNS). On the remote Mac, run **`scutil --get LocalHostName`** and use **`Name.local`**. Both hosts must resolve that name (usually same subnet).
+
 ## Options (extra vars)
+
+Playbook variables (Ballai / legacy names) map into the Monolith role as shown.
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `github_repo` | `spooky-fox/ballai` | `owner/name` |
-| `runner_labels` | `ballai-ci` | Comma-separated labels (no spaces) |
+| `github_account` | `spooky-fox` | Repo or org owner for registration |
+| `github_repo` | `ballai` | Repository name (when `runner_org: false`) |
+| `runner_labels` | `[ballai-ci]` | List, or comma-separated string via `-e` |
 | `runner_dir` | `$HOME/actions-runner` | Install directory |
-| `github_actions_runner_version` | `latest` | or pin e.g. `v2.333.0` |
-| `github_actions_runner_replace` | `false` | Set `true` to re-run `config.sh --replace` |
-| `github_actions_runner_install_service` | `true` | Run `./svc.sh install` / `start` as your user |
+| `runner_user` | `{{ ansible_user }}` | Unix user for the runner (set explicitly if needed) |
+| `github_actions_runner_version` | `latest` | Passed to role as `runner_version` (leading `v` stripped if present) |
+| `github_actions_runner_replace` | `false` | Maps to `reinstall_runner` (re-register / replace) |
+| `github_actions_runner_install_service` | `true` | `true` → `runner_state: started`, `false` → `stopped` |
 | `github_actions_runner_github_token_file` | `""` | Override path to token file (else `ansible/github_token`) |
-| `github_actions_runner_become_password_file` | `""` | Override path to sudo password file (else `ansible/become_password`) |
+| `github_actions_runner_become_password_file` | `""` | Override path to sudo password file (must exist if set) |
+| `ballai_ansible_become_secret_id` | from env `BALLAI_ANSIBLE_BECOME_SECRET_ID` | If set and password still unset, load via `amazon.aws.aws_secret` lookup |
+| `github_actions_runner_install_ci_tools` | `true` | macOS only: `brew install` swiftlint, xcodegen, xcbeautify after the role |
+
+### Monolith role knobs (advanced CI)
+
+Pass through any variable from the [role README](https://github.com/MonolithProjects/ansible-github_actions_runner/blob/master/README.md), for example:
+
+- **`runner_org: true`** — organization runner; set `github_account` to the org.
+- **`github_owner`**, **`runner_group`**, **`runner_name`**, **`runner_no_default_labels`**
+- **`runner_extra_config_args`** — e.g. `--ephemeral` for disposable agents
+- **`custom_env`** — proxy / env block for the runner `.env` file
+- **`all_runners_in_same_repo: false`** — multiple repos in one play
+- **`github_api_url`**, **`github_url`**, **`runner_on_ghes`** — GitHub Enterprise
+- **`runner_state: absent`** — unregister and remove the runner
 
 ### Re-register the same machine
 
 ```bash
-uv run ansible-playbook -i inventory playbooks/github_actions_runner_mac.yml \
+uv run ansible-playbook -i inventory playbooks/github_actions_runner.yml \
   -e github_actions_runner_replace=true
 ```
 
-### Built-in Ansible equivalents
+`ansible.cfg` sets **`interpreter_python = auto_silent`**, **`roles_path`**, **`collections_path`**, and **`allow_broken_conditionals = true`** so Monolith’s role stays compatible with ansible-core 2.20+ (upstream `when:` uses a non-boolean expression). Remove when the Galaxy role fixes that.
 
-- **`ansible-playbook --become-password-file=...`** instead of `ansible/become_password`.
-
-`ansible.cfg` sets **`interpreter_python = auto_silent`**.
-
-Workflow jobs must use labels matching `runner_labels` (e.g. `ballai-ci` in `spooky-fox/ballai` CI).
+Workflow jobs must use labels matching `runner_labels` (e.g. **`ballai-ci`** in `spooky-fox/ballai` CI).

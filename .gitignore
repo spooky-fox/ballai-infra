@@ -18,7 +18,9 @@ terraform.rc
 ansible/inventory
 !ansible/inventory.example
 ansible/.venv/
+ansible/.ansible/
 ansible/become_password
+ansible/.pw
 ansible/github_token
 
 # OS / editor
