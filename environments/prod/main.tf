@@ -3,6 +3,36 @@ module "ballai_worker" {
 
   name_prefix = var.name_prefix
   account_id  = var.cloudflare_account_id
+
+  worker_secret_names = toset([
+    "AUTH_SECRET",
+    "TOGETHER_API_KEY",
+    "TAVILY_API_KEY",
+    "KAGI_API_KEY",
+    "SERPAPI_KEY",
+    "GOOGLE_SERVICE_ACCOUNT_EMAIL",
+    "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+    "TILLER_SPREADSHEET_ID",
+    "TILLER_PERSONAL_SPREADSHEET_ID",
+    "TILLER_BUSINESS_SPREADSHEET_ID",
+    "GENIUS_SCAN_FOLDER_ID",
+    "DUFFEL_API_TOKEN",
+  ])
+
+  worker_secrets = {
+    AUTH_SECRET                        = var.worker_auth_secret
+    TOGETHER_API_KEY                   = var.together_api_key
+    TAVILY_API_KEY                     = var.tavily_api_key
+    KAGI_API_KEY                       = var.kagi_api_key
+    SERPAPI_KEY                        = var.serpapi_key
+    GOOGLE_SERVICE_ACCOUNT_EMAIL       = var.google_service_account_email
+    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = var.google_service_account_private_key
+    TILLER_SPREADSHEET_ID              = var.tiller_spreadsheet_id
+    TILLER_PERSONAL_SPREADSHEET_ID     = var.tiller_personal_spreadsheet_id
+    TILLER_BUSINESS_SPREADSHEET_ID     = var.tiller_business_spreadsheet_id
+    GENIUS_SCAN_FOLDER_ID              = var.genius_scan_folder_id
+    DUFFEL_API_TOKEN                   = var.duffel_api_token
+  }
 }
 
 module "github_actions_runners" {
