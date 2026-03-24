@@ -67,11 +67,11 @@ Copy examples: `cp github_token.example github_token` then replace the token; **
 cp inventory.example inventory
 ```
 
-**`inventory.example` is checked in** with the default Ballai layout: **`localhost`** plus a second Mac via **mDNS** (`ansible_host=Marks-MacBook-Pro-2.local`, `ansible_user=ballew`). Adjust hostname and user after `cp` to match your machines (`scutil --get LocalHostName` on the remote Mac).
+**`inventory.example` is checked in** with the default Ballai layout: **`localhost`** plus a second Mac at **`ansible_host=192.168.1.51`**, **`ansible_user=ballew`**. Edit IP, user, or use **`*.local`** after `cp` to match your LAN.
 
 Use **`[github_runners]`** for new setups. You can keep **`[mac_runners]`** for older inventories; those hosts are still included.
 
-**mDNS:** Ansible uses whatever **`ansible_host`** you set; there is no separate “mDNS discovery” step. **`*.local`** is resolved by macOS Bonjour on the same LAN (DHCP-safe). Use a static IP instead if `.local` does not resolve.
+**`host foo.local` → NXDOMAIN:** normal. **`host`** / **`dig`** query unicast DNS, not Bonjour. That does not prove SSH to **`foo.local`** will fail—OpenSSH on macOS can still use mDNS. If **`ssh user@foo.local`** does fail, use the machine’s **LAN IP** in inventory (and reserve DHCP or update when the IP changes).
 
 **SSH:** The controller must be able to SSH as **`ansible_user`** to each remote host (e.g. `ssh-copy-id` or an SSH agent key GitHub-style). Unreachable hosts are skipped after fact gathering; fix keys, then re-run the play.
 

@@ -16,9 +16,9 @@
 # (all_runners_in_same_repo: false). See role README:
 # https://github.com/MonolithProjects/ansible-github_actions_runner
 #
-# Multi-host / mDNS: list each runner under [github_runners] in inventory (see inventory.example).
-# Use ansible_host=<LocalHostName>.local so SSH targets track DHCP on the LAN (Bonjour); no extra
-# playbook tasks are required—resolution is done by the OS when Ansible connects.
+# Multi-host: list each runner under [github_runners] in inventory (see inventory.example).
+# Use ansible_host=<LAN-IP> or <LocalHostName>.local; `host *.local` often NXDOMAIN (unicast DNS
+# ≠ mDNS). Prefer a reserved DHCP / static IP if .local fails from the controller.
 #
 - name: GitHub Actions self-hosted runner (MonolithProjects + Ballai extras)
   # Union so existing inventories using [mac_runners] keep working.

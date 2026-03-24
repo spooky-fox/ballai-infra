@@ -2,21 +2,20 @@
 #
 # The playbook targets hosts in [github_runners] OR [mac_runners] (union).
 #
-# --- Bonjour / mDNS (same LAN, DHCP-safe) ---
-# Ansible does not “discover” hosts automatically: you set ansible_host to the Mac’s
-# multicast DNS name. On the remote Mac: System Settings → General → Sharing → Local hostname,
-# or run: scutil --get LocalHostName  → use that value + ".local" (e.g. Marks-MacBook-Pro-2.local).
-# The controller must resolve that name (same subnet / IPv6 link-local mDNS is enough for most LANs).
+# --- ansible_host: LAN IP vs .local ---
+# Use a static LAN IP (below) when mDNS is flaky or `host Name.local` returns NXDOMAIN — that is
+# normal: `host`/`dig` use unicast DNS, not Bonjour. SSH/OpenSSH still resolves .local via mDNS on
+# macOS when it works. If the other Mac’s DHCP address changes, update this IP or switch to .local.
 #
-# --- Static IP (optional) ---
-# Replace ansible_host with an IP if you prefer: ansible_host=10.0.0.5
+# --- Bonjour / mDNS (optional) ---
+# Alternative: ansible_host=Marks-MacBook-Pro-2.local (see scutil --get LocalHostName on remote).
 #
 # --- Linux self-hosted (optional) ---
-# Add a host with ansible_user set; Monolith installs packages + systemd there.
+# Add hosts with ansible_user set; Monolith installs packages + systemd there.
 
 [github_runners]
 localhost ansible_connection=local
-marks-runner ansible_host=Marks-MacBook-Pro-2.local ansible_user=ballew
+marks-runner ansible_host=192.168.1.51 ansible_user=ballew
 
 # Legacy: hosts only under mac_runners still run (playbook host pattern is github_runners:mac_runners).
 # [mac_runners]
