@@ -1,0 +1,11 @@
+[project]
+name = "ballai-infra-ansible"
+version = "0.0.0"
+description = "Controller deps for ballai-infra Ansible playbooks"
+requires-python = ">=3.12"
+dependencies = [
+  "ansible-core>=2.20,<3",
+]
+
+[tool.uv]
+# Default venv lives at ansible/.venv when you run `uv sync` from this directory.
