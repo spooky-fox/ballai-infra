@@ -16,7 +16,7 @@
 
 [github_runners]
 localhost ansible_connection=local
-marks-runner ansible_host=Marks-MacBook-Pro-2.local ansible_user=mballew
+marks-runner ansible_host=Marks-MacBook-Pro-2.local ansible_user=ballew
 
 # Legacy: hosts only under mac_runners still run (playbook host pattern is github_runners:mac_runners).
 # [mac_runners]

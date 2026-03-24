@@ -67,7 +67,7 @@ Copy examples: `cp github_token.example github_token` then replace the token; **
 cp inventory.example inventory
 ```
 
-**`inventory.example` is checked in** with the default Ballai layout: **`localhost`** plus a second Mac via **mDNS** (`ansible_host=Marks-MacBook-Pro-2.local`, `ansible_user=mballew`). Adjust hostname and user after `cp` to match your machines (`scutil --get LocalHostName` on the remote Mac).
+**`inventory.example` is checked in** with the default Ballai layout: **`localhost`** plus a second Mac via **mDNS** (`ansible_host=Marks-MacBook-Pro-2.local`, `ansible_user=ballew`). Adjust hostname and user after `cp` to match your machines (`scutil --get LocalHostName` on the remote Mac).
 
 Use **`[github_runners]`** for new setups. You can keep **`[mac_runners]`** for older inventories; those hosts are still included.
 
