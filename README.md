@@ -58,6 +58,11 @@ Workflows target these with:
 - `runs-on: codebuild-<project-name>-${{ github.run_id }}-${{ github.run_attempt }}`
 - Repos can bootstrap safely with `USE_CODEBUILD_RUNNERS=false` (default fallback to `ubuntu-latest`) and then flip to `true` after runner projects are ready.
 
+**Optional (Terraform, default off):**
+
+- `enable_github_actions_codebuild_backup` — second Linux CodeBuild project per `ballai` / `ballai-infra` with larger compute (`BUILD_GENERAL1_LARGE`) and distinct `runs-on` labels (`codebuild-ballai-gha-ballai-backup-…` and `codebuild-ballai-gha-ballai-infra-backup-…`) for hot-standby or testing.
+- `github_actions_codebuild_extra_repositories` — map for additional projects (e.g. future macOS `MAC_ARM` pools targeting the same repo with a different key). See `environments/prod/terraform.tfvars.example`.
+
 Important prerequisite: AWS account-level CodeBuild GitHub source credentials/connection must exist, or webhook/project setup will not be usable at runtime.
 
 ### Observe and tune policy
