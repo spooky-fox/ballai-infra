@@ -15,6 +15,7 @@ Terraform for [Ballai](https://github.com/spooky-fox/Ballai) and related Cloudfl
 - Terraform `>= 1.5`
 - Cloudflare API token with permissions for planned resources (GitHub Actions: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` as `TF_VAR_cloudflare_account_id` where used)
 - Remote state: use `environments/prod/backend.tf.example` and `environments/prod/lanzo-web/backend.tf.example` as templates — **do not commit** secrets
+- **Git:** this repo expects **unsigned commits** (avoids pinentry in automation). Run once per clone: `chmod +x scripts/git-no-gpg-sign.sh && ./scripts/git-no-gpg-sign.sh` (sets `commit.gpgsign = false` locally).
 
 ## Layout
 
