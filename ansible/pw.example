@@ -1,0 +1,4 @@
+# Copy to .pw and replace with your sudo password (single line, no newline preferred).
+# chmod 600 .pw
+#
+# Or run: scripts/sync_ansible_secrets_from_aws.sh (see README).

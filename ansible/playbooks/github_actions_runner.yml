@@ -1,0 +1,243 @@
+---
+# Provisions GitHub Actions self-hosted runners using MonolithProjects' Galaxy role
+# (Linux + macOS), plus Ballai-specific extras on macOS (Homebrew gnu-tar, CI toolchain).
+#
+# Install role once: ansible-galaxy role install -r requirements.yml
+#
+# Secrets on the controller (chmod 600):
+#   ansible/github_token — one-line PAT (repo scope for repo runners; or admin:org for org runners)
+# Sudo / become (Monolith uses become for install dir, unarchive, config.sh; svc.sh stays non-root on Darwin):
+#   Prefer ansible/.pw (single line), else ansible/become_password, else env ANSIBLE_BECOME_PASSWORD,
+#   else AWS Secrets Manager when BALLAI_ANSIBLE_BECOME_SECRET_ID is set (needs amazon.aws collection).
+#   Optional: scripts/sync_ansible_secrets_from_aws.sh writes .pw from AWS (see README).
+#
+# Extend later: org runners (runner_org, github_account), GHES (github_api_url, runner_on_ghes),
+# ephemeral runners (runner_extra_config_args), proxy (custom_env), multiple repos
+# (all_runners_in_same_repo: false). See role README:
+# https://github.com/MonolithProjects/ansible-github_actions_runner
+#
+- name: GitHub Actions self-hosted runner (MonolithProjects + Ballai extras)
+  # Union so existing inventories using [mac_runners] keep working.
+  hosts: github_runners:mac_runners
+  gather_facts: true
+  # Do not set become: true here — gather_facts would run before pre_tasks load .pw / Secrets Manager.
+  become: false
+
+  vars:
+    github_account: spooky-fox
+    github_repo: ballai
+    runner_user: "{{ ansible_user }}"
+    runner_dir: "{{ ansible_facts['env']['HOME'] }}/actions-runner"
+    runner_labels:
+      - ballai-ci
+    runner_org: false
+    # Map legacy Ballai variable names to the Monolith role.
+    runner_version: "{{ github_actions_runner_version | default('latest') }}"
+    reinstall_runner: "{{ github_actions_runner_replace | default(false) | bool }}"
+    runner_state: "{{ 'started' if (github_actions_runner_install_service | default(true) | bool) else 'stopped' }}"
+    # Controller-side paths (empty = ansible/github_token next to playbooks/)
+    github_actions_runner_github_token_file: ""
+    github_actions_runner_become_password_file: ""
+    ballai_runner_install_ci_tools: "{{ github_actions_runner_install_ci_tools | default(true) | bool }}"
+    # Plain secret id or ARN; set via env for CI/automation (requires ansible-galaxy collection install amazon.aws).
+    ballai_ansible_become_secret_id: "{{ lookup('env', 'BALLAI_ANSIBLE_BECOME_SECRET_ID') | default('', true) }}"
+
+  pre_tasks:
+    - name: Require ansible-core 2.20 or newer
+      ansible.builtin.assert:
+        that:
+          - ansible_version.major | int > 2 or
+            (ansible_version.major | int == 2 and ansible_version.minor | int >= 20)
+        fail_msg: >-
+          Install ansible-core 2.20+ (cd ansible && uv sync) or use a venv +
+          pip install -r ansible/requirements.txt.
+
+    - name: Normalize runner_labels to a list when passed as a string (-e runner_labels=a,b)
+      ansible.builtin.set_fact:
+        runner_labels: "{{ runner_labels.split(',') | map('trim') | reject('equalto', '') | list }}"
+      when: runner_labels is string
+
+    - name: Normalize pinned runner_version (Monolith tarball URLs use v2.3.4 with no leading v in var)
+      ansible.builtin.set_fact:
+        runner_version: "{{ (runner_version | string) | regex_replace('^v', '') }}"
+      when: (runner_version | string) != 'latest'
+
+    - name: Resolve GitHub token file path on controller
+      ansible.builtin.set_fact:
+        _github_token_path: >-
+          {{
+            github_actions_runner_github_token_file
+            if (github_actions_runner_github_token_file | default('') | length > 0)
+            else ((playbook_dir | dirname) ~ '/github_token')
+          }}
+
+    - name: Stat GitHub token file on controller
+      ansible.builtin.stat:
+        path: "{{ _github_token_path }}"
+      delegate_to: localhost
+      connection: local
+      register: _gh_tok_stat
+
+    - name: Set access_token from file on controller
+      ansible.builtin.set_fact:
+        access_token: "{{ lookup('file', _github_token_path) | trim }}"
+      when: _gh_tok_stat.stat.exists | default(false)
+      no_log: true
+
+    - name: Set access_token from environment
+      ansible.builtin.set_fact:
+        access_token: >-
+          {{
+            lookup('env', 'GITHUB_TOKEN')
+            | default(lookup('env', 'PERSONAL_ACCESS_TOKEN'), true)
+            | default('', true)
+          }}
+      when: not (_gh_tok_stat.stat.exists | default(false))
+      no_log: true
+
+    # Become password: explicit path → .pw → become_password → ANSIBLE_BECOME_PASSWORD → AWS Secrets Manager
+    - name: Stat override become password file on controller
+      ansible.builtin.stat:
+        path: "{{ github_actions_runner_become_password_file }}"
+      delegate_to: localhost
+      connection: local
+      register: _stat_override_become_pw
+      when: github_actions_runner_become_password_file | default('') | length > 0
+
+    - name: Require override become password file to exist
+      ansible.builtin.assert:
+        that:
+          - _stat_override_become_pw.stat.exists | default(false)
+        fail_msg: >-
+          Become password file not found: {{ github_actions_runner_become_password_file }}
+      when: github_actions_runner_become_password_file | default('') | length > 0
+
+    - name: Use override become password path
+      ansible.builtin.set_fact:
+        _become_password_path: "{{ github_actions_runner_become_password_file }}"
+      when:
+        - github_actions_runner_become_password_file | default('') | length > 0
+        - _stat_override_become_pw.stat.exists | default(false)
+
+    - name: Stat .pw on controller
+      ansible.builtin.stat:
+        path: "{{ (playbook_dir | dirname) ~ '/.pw' }}"
+      delegate_to: localhost
+      connection: local
+      register: _stat_dot_pw
+      when: _become_password_path is not defined
+
+    - name: Use .pw when present
+      ansible.builtin.set_fact:
+        _become_password_path: "{{ (playbook_dir | dirname) ~ '/.pw' }}"
+      when:
+        - _become_password_path is not defined
+        - _stat_dot_pw.stat.exists | default(false)
+
+    - name: Stat become_password on controller (legacy filename)
+      ansible.builtin.stat:
+        path: "{{ (playbook_dir | dirname) ~ '/become_password' }}"
+      delegate_to: localhost
+      connection: local
+      register: _stat_legacy_become_pw
+      when: _become_password_path is not defined
+
+    - name: Use become_password when present
+      ansible.builtin.set_fact:
+        _become_password_path: "{{ (playbook_dir | dirname) ~ '/become_password' }}"
+      when:
+        - _become_password_path is not defined
+        - _stat_legacy_become_pw.stat.exists | default(false)
+
+    - name: Load ansible_become_password from file
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ lookup('file', _become_password_path) | trim }}"
+      when: _become_password_path is defined
+      no_log: true
+
+    - name: Load ansible_become_password from environment
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ lookup('env', 'ANSIBLE_BECOME_PASSWORD') | trim }}"
+      when:
+        - (ansible_become_password | default('') | length) == 0
+        - (lookup('env', 'ANSIBLE_BECOME_PASSWORD') | default('', true) | length) > 0
+      no_log: true
+
+    - name: Load ansible_become_password from AWS Secrets Manager
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ lookup('amazon.aws.aws_secret', ballai_ansible_become_secret_id) | trim }}"
+      when:
+        - (ansible_become_password | default('') | length) == 0
+        - ballai_ansible_become_secret_id | default('') | length > 0
+      no_log: true
+
+    - name: Resolve Homebrew executable (macOS)
+      ansible.builtin.shell: command -v brew
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+      register: _brew_cmd
+      changed_when: false
+      become: false
+      when: ansible_facts.system == 'Darwin'
+
+    - name: Require Homebrew on macOS runner hosts
+      ansible.builtin.assert:
+        that:
+          - _brew_cmd.rc == 0
+          - _brew_cmd.stdout | length > 0
+        fail_msg: >-
+          Install Homebrew (https://brew.sh). gnu-tar is required so Ansible unarchive can use gtar.
+      when: ansible_facts.system == 'Darwin'
+
+    - name: Ensure GNU tar formula (macOS) so ansible unarchive finds gtar
+      ansible.builtin.command:
+        argv:
+          - "{{ _brew_cmd.stdout | trim }}"
+          - install
+          - gnu-tar
+      environment:
+        HOMEBREW_NONINTERACTIVE: "1"
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+      register: _brew_gnu_tar
+      changed_when: false
+      failed_when: _brew_gnu_tar.rc != 0
+      become: false
+      when: ansible_facts.system == 'Darwin'
+
+  roles:
+    - role: monolithprojects.github_actions_runner
+
+  post_tasks:
+    - name: Resolve Homebrew for CI toolchain (macOS)
+      ansible.builtin.shell: command -v brew
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+      register: _brew_cmd_ci
+      changed_when: false
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_ci_tools | bool
+
+    - name: Ensure Ballai CI brew toolchain (macOS)
+      ansible.builtin.command:
+        argv:
+          - "{{ _brew_cmd_ci.stdout | trim }}"
+          - install
+          - swiftlint
+          - xcodegen
+          - xcbeautify
+      environment:
+        HOMEBREW_NONINTERACTIVE: "1"
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+      register: _brew_ci_tools
+      changed_when: false
+      failed_when: _brew_ci_tools.rc != 0
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_ci_tools | bool

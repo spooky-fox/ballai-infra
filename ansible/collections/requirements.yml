@@ -1,0 +1,5 @@
+---
+# Install: uv run ansible-galaxy collection install -r collections/requirements.yml
+collections:
+  - name: amazon.aws
+    version: ">=8.0.0"
