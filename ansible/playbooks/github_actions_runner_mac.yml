@@ -1,0 +1,319 @@
+---
+# Install / configure a GitHub Actions self-hosted runner on macOS (arm64 or x86_64).
+#
+# Prerequisites on the Mac: Homebrew (for gnu-tar — ansible.builtin.unarchive needs GNU tar;
+# Apple ships BSD tar only). Xcode / CLT and other brew tools (xcodegen, swiftlint) are not here.
+#
+# Fully automated (no prompts): put secrets on the Ansible controller (chmod 600):
+#   ansible/github_token       — one line, PAT with repo admin (or override path via var)
+#   ansible/become_password    — optional; one line, sudo password if you use become tasks
+# If ansible/github_token is missing, falls back to env GITHUB_TOKEN.
+#
+# Example:
+#   cd ansible && uv sync
+#   cp github_token.example github_token && printf '%s\n' 'ghp_...' > github_token && chmod 600 github_token
+#   uv run ansible-playbook -i inventory playbooks/github_actions_runner_mac.yml
+#
+# Requires ansible-core 2.20+ (see ansible/requirements.txt).
+#
+- name: GitHub Actions self-hosted runner (macOS)
+  hosts: mac_runners
+  gather_facts: true
+
+  vars:
+    # "latest" resolves actions/runner release tag via the GitHub API; or pin e.g. v2.333.0
+    github_actions_runner_version: latest
+    github_repo: spooky-fox/ballai
+    runner_labels: ballai-ci
+    runner_dir: "{{ ansible_facts['env']['HOME'] }}/actions-runner"
+    # macOS svc.sh installs ~/Library/LaunchAgents only (no sudo). Do not use become here.
+    github_actions_runner_install_service: true
+    # When true, always runs config.sh --replace (new registration). Use false after first install.
+    github_actions_runner_replace: false
+    # Non-empty = explicit controller path; empty = try ansible/github_token then GITHUB_TOKEN env.
+    github_actions_runner_github_token_file: ""
+    # Non-empty = explicit path; empty = try ansible/become_password if present (for become tasks).
+    github_actions_runner_become_password_file: ""
+
+  pre_tasks:
+    - name: Require ansible-core 2.20 or newer
+      ansible.builtin.assert:
+        that:
+          - ansible_version.major | int > 2 or
+            (ansible_version.major | int == 2 and ansible_version.minor | int >= 20)
+        fail_msg: >-
+          Install ansible-core 2.20+ (cd ansible && uv sync) or use a venv +
+          pip install -r ansible/requirements.txt.
+
+    - name: Require macOS
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['system'] == "Darwin"
+        fail_msg: This playbook only supports macOS targets.
+
+    - name: Map CPU to runner archive flavor
+      ansible.builtin.set_fact:
+        _runner_osx_arch: "{{ 'osx-arm64' if ansible_facts['architecture'] == 'arm64' else 'osx-x64' }}"
+
+    # --- Secrets on controller (ansible/ next to playbooks/); no TTY required ---
+    - name: Resolve GitHub token file path on controller
+      ansible.builtin.set_fact:
+        _github_token_path: >-
+          {{
+            github_actions_runner_github_token_file
+            if (github_actions_runner_github_token_file | default('') | length > 0)
+            else ((playbook_dir | dirname) ~ '/github_token')
+          }}
+
+    - name: Stat GitHub token file on controller
+      ansible.builtin.stat:
+        path: "{{ _github_token_path }}"
+      delegate_to: localhost
+      connection: local
+      register: _gh_tok_stat
+
+    - name: Resolve github_token from file on controller
+      ansible.builtin.set_fact:
+        github_token: "{{ lookup('file', _github_token_path) | trim }}"
+      when: _gh_tok_stat.stat.exists | default(false)
+      no_log: true
+
+    - name: Resolve github_token from environment
+      ansible.builtin.set_fact:
+        github_token: "{{ lookup('env', 'GITHUB_TOKEN') | default('', true) }}"
+      when: not (_gh_tok_stat.stat.exists | default(false))
+      no_log: true
+
+    - name: Resolve become password file path on controller
+      ansible.builtin.set_fact:
+        _become_password_path: >-
+          {{
+            github_actions_runner_become_password_file
+            if (github_actions_runner_become_password_file | default('') | length > 0)
+            else ((playbook_dir | dirname) ~ '/become_password')
+          }}
+
+    - name: Stat become password file on controller
+      ansible.builtin.stat:
+        path: "{{ _become_password_path }}"
+      delegate_to: localhost
+      connection: local
+      register: _become_pw_stat
+
+    - name: Load ansible_become_password when file exists
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ lookup('file', _become_password_path) | trim }}"
+      when: _become_pw_stat.stat.exists | default(false)
+      no_log: true
+
+  tasks:
+    - name: Resolve latest actions/runner release (when version is latest)
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/actions/runner/releases/latest
+        return_content: true
+        headers:
+          Accept: application/vnd.github+json
+      register: _runner_release
+      when: github_actions_runner_version == 'latest'
+
+    - name: Set runner version tag
+      ansible.builtin.set_fact:
+        _runner_version_tag: >-
+          {{
+            _runner_release.json.tag_name
+            if github_actions_runner_version == 'latest'
+            else github_actions_runner_version
+          }}
+
+    - name: Derive tarball version (no leading v)
+      ansible.builtin.set_fact:
+        _runner_tar_version: "{{ _runner_version_tag | regex_replace('^v', '') }}"
+
+    - name: Versioned runner tarball path
+      ansible.builtin.set_fact:
+        _runner_tarball_path: "{{ runner_dir }}/actions-runner-{{ _runner_osx_arch }}-{{ _runner_tar_version }}.tar.gz"
+
+    - name: Ensure runner install directory exists
+      ansible.builtin.file:
+        path: "{{ runner_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Stat existing runner registration
+      ansible.builtin.stat:
+        path: "{{ runner_dir }}/.runner"
+      register: _runner_state_file
+
+    - name: Decide if runner registration (or replace) is required
+      ansible.builtin.set_fact:
+        _needs_runner_registration: "{{ (not _runner_state_file.stat.exists) or (github_actions_runner_replace | bool) }}"
+
+    - name: Require GitHub token when registering or replacing runner
+      ansible.builtin.assert:
+        that:
+          - github_token | length > 0
+        fail_msg: >-
+          Add ansible/github_token (one line, PAT) on the controller or set GITHUB_TOKEN when
+          creating or replacing registration (.runner missing, or github_actions_runner_replace=true).
+      when: _needs_runner_registration | bool
+
+    - name: Resolve Homebrew executable
+      ansible.builtin.shell: command -v brew
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+      register: _brew_cmd
+      changed_when: false
+
+    - name: Require Homebrew
+      ansible.builtin.assert:
+        that:
+          - _brew_cmd.rc == 0
+          - _brew_cmd.stdout | length > 0
+        fail_msg: >-
+          Install Homebrew (https://brew.sh). Ansible needs it to install gnu-tar for unarchive.
+
+    - name: Ensure GNU tar is installed (gnu-tar formula)
+      ansible.builtin.command:
+        argv:
+          - "{{ _brew_cmd.stdout | trim }}"
+          - install
+          - gnu-tar
+      environment:
+        HOMEBREW_NONINTERACTIVE: "1"
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+      register: _brew_gnu_tar
+      changed_when: false
+      failed_when: _brew_gnu_tar.rc != 0
+
+    - name: Resolve gnu-tar prefix for GNU tar on PATH
+      ansible.builtin.command:
+        argv:
+          - "{{ _brew_cmd.stdout | trim }}"
+          - --prefix
+          - gnu-tar
+      register: _gnu_tar_prefix
+      changed_when: false
+
+    - name: Set path to GNU tar gnubin
+      ansible.builtin.set_fact:
+        _gnu_tar_gnubin: "{{ (_gnu_tar_prefix.stdout | trim) ~ '/libexec/gnubin' }}"
+
+    - name: Verify tar on PATH is GNU tar (unarchive requires GNU tar)
+      ansible.builtin.command: tar --version
+      environment:
+        PATH: "{{ _gnu_tar_gnubin }}:{{ ansible_facts['env']['PATH'] | default('') }}"
+      register: _gnu_tar_version
+      changed_when: false
+
+    - name: Assert GNU tar is active
+      ansible.builtin.assert:
+        that:
+          - "'GNU tar' in _gnu_tar_version.stdout"
+        fail_msg: >-
+          Expected GNU tar from {{ _gnu_tar_gnubin }}; check brew install gnu-tar and gnubin PATH.
+
+    - name: Download actions runner package
+      ansible.builtin.get_url:
+        url: >-
+          https://github.com/actions/runner/releases/download/{{ _runner_version_tag }}/actions-runner-{{ _runner_osx_arch }}-{{ _runner_tar_version }}.tar.gz
+        dest: "{{ _runner_tarball_path }}"
+        mode: "0644"
+
+    - name: Unpack runner (overwrites binaries)
+      ansible.builtin.unarchive:
+        src: "{{ _runner_tarball_path }}"
+        dest: "{{ runner_dir }}"
+        remote_src: true
+      environment:
+        PATH: "{{ _gnu_tar_gnubin }}:{{ ansible_facts['env']['PATH'] | default('') }}"
+
+    - name: Remove tarball after extract
+      ansible.builtin.file:
+        path: "{{ _runner_tarball_path }}"
+        state: absent
+
+    - name: Remove legacy non-versioned tarball if present
+      ansible.builtin.file:
+        path: "{{ runner_dir }}/actions-runner.tar.gz"
+        state: absent
+
+    - name: Remove stale versioned runner tarballs
+      ansible.builtin.find:
+        paths: "{{ runner_dir }}"
+        patterns: "actions-runner-osx-*.tar.gz"
+        file_type: file
+      register: _stale_runner_tars
+
+    - name: Delete stale runner tarballs (not current version)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ _stale_runner_tars.files | default([]) }}"
+      when: item.path != _runner_tarball_path
+
+    - name: Mint runner registration token
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/{{ github_repo }}/actions/runners/registration-token"
+        method: POST
+        status_code: [201]
+        headers:
+          Authorization: "Bearer {{ github_token }}"
+          Accept: application/vnd.github+json
+      register: _reg
+      no_log: true
+      when: _needs_runner_registration | bool
+
+    - name: Configure runner (first registration)
+      ansible.builtin.command:
+        argv:
+          - ./config.sh
+          - --url
+          - "https://github.com/{{ github_repo }}"
+          - --token
+          - "{{ _reg['json']['token'] }}"
+          - --labels
+          - "{{ runner_labels }}"
+          - --unattended
+        chdir: "{{ runner_dir }}"
+        creates: "{{ runner_dir }}/.runner"
+      when:
+        - not (github_actions_runner_replace | bool)
+        - _needs_runner_registration | bool
+      changed_when: true
+      no_log: true
+
+    - name: Configure runner (replace registration)
+      ansible.builtin.command:
+        argv:
+          - ./config.sh
+          - --url
+          - "https://github.com/{{ github_repo }}"
+          - --token
+          - "{{ _reg['json']['token'] }}"
+          - --labels
+          - "{{ runner_labels }}"
+          - --unattended
+          - --replace
+        chdir: "{{ runner_dir }}"
+      when:
+        - github_actions_runner_replace | bool
+        - _needs_runner_registration | bool
+      changed_when: true
+      no_log: true
+
+    # svc.sh must run as the runner user (id != 0). It does not use sudo on macOS (LaunchAgents).
+    - name: Install LaunchAgent service (svc.sh install)
+      ansible.builtin.command:
+        cmd: ./svc.sh install
+        chdir: "{{ runner_dir }}"
+      when: github_actions_runner_install_service | bool
+      register: _svc_install
+      changed_when: _svc_install.rc == 0
+
+    - name: Start LaunchAgent service (svc.sh start)
+      ansible.builtin.command:
+        cmd: ./svc.sh start
+        chdir: "{{ runner_dir }}"
+      when: github_actions_runner_install_service | bool

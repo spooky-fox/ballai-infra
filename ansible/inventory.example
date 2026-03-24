@@ -1,0 +1,11 @@
+# Copy to inventory (gitignored) or pass -i with your host.
+# For unattended runs, use ansible/github_token on the controller (see README).
+#
+# Local Mac (install on the machine you run Ansible from):
+#   localhost ansible_connection=local
+#
+# Remote Mac over SSH:
+#   my-mac ansible_host=10.0.0.5 ansible_user=you
+
+[mac_runners]
+localhost ansible_connection=local
