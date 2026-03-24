@@ -12,11 +12,16 @@
 #
 # --- Linux self-hosted (optional) ---
 # Add hosts with ansible_user set; Monolith installs packages + systemd there.
+#
+# --- mac_runners (legacy) ---
+# The play uses hosts: github_runners:mac_runners. Define [mac_runners] even when empty so Ansible
+# does not warn "Could not match supplied host pattern, ignoring: mac_runners".
+
+[mac_runners]
 
 [github_runners]
 localhost ansible_connection=local
 marks-runner ansible_host=192.168.1.51 ansible_user=ballew
 
-# Legacy: hosts only under mac_runners still run (playbook host pattern is github_runners:mac_runners).
-# [mac_runners]
+# Optional: second host only under mac_runners (still picked up by the union):
 # other ansible_host=10.0.0.12 ansible_user=you

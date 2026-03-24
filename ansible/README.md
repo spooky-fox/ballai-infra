@@ -53,7 +53,15 @@ Default registration: repository **`spooky-fox/ballai`** with label **`ballai-ci
 
 Copy examples: `cp github_token.example github_token` then replace the token; **`chmod 600 github_token`**.
 
-**Inventory note:** The play targets **`github_runners:mac_runners`** (hosts in either group). If you only define `[github_runners]`, Ansible may warn that **`mac_runners`** did not match; that is harmless.
+**Inventory note:** The play targets **`github_runners:mac_runners`**. **`inventory.example`** includes an **empty `[mac_runners]`** group so Ansible does not warn about an unknown pattern. Add hosts there only if you use the legacy layout.
+
+### Warnings you might see (or we hide)
+
+| Message | Cause | What we do |
+|--------|--------|------------|
+| **`ignoring: mac_runners`** | No `[mac_runners]` group in inventory | Keep an empty **`[mac_runners]`** (see `inventory.example`). |
+| **`Conditional result … runner_state\|lower`** | Monolith role 1.27.0 `when:` is not strict boolean | **`allow_broken_conditionals = true`** in `ansible.cfg` until Galaxy fixes it. |
+| **`INJECT_FACTS_AS_VARS` / `ansible_distribution`** | Role uses old fact style (`ansible_distribution` vs `ansible_facts['distribution']`) | **`deprecation_warnings = false`** in `ansible.cfg` to cut noise from the vendor role; set **`deprecation_warnings = true`** when developing our YAML to see new core notices. |
 
 ## Requirements
 
@@ -113,6 +121,6 @@ uv run ansible-playbook -i inventory playbooks/github_actions_runner.yml \
   -e github_actions_runner_replace=true
 ```
 
-`ansible.cfg` sets **`interpreter_python = auto_silent`**, **`roles_path`**, **`collections_path`**, and **`allow_broken_conditionals = true`** so Monolith’s role stays compatible with ansible-core 2.20+ (upstream `when:` uses a non-boolean expression). Remove when the Galaxy role fixes that.
+`ansible.cfg` sets **`interpreter_python = auto_silent`**, **`roles_path`**, **`collections_path`**, **`allow_broken_conditionals = true`**, and **`deprecation_warnings = false`** (vendor-role deprecations). Tighten when Monolith ships fixes.
 
 Workflow jobs must use labels matching `runner_labels` (e.g. **`ballai-ci`** in `spooky-fox/ballai` CI).
