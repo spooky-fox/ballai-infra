@@ -1,35 +1,23 @@
-# Copy to inventory (gitignored) or pass -i with your host.
-# The runner playbook targets hosts in github_runners OR mac_runners (union).
+# Copy to `inventory` (gitignored): `cp inventory.example inventory`
 #
-# Preferred group name (Linux or macOS self-hosted):
-#   [github_runners]
+# The playbook targets hosts in [github_runners] OR [mac_runners] (union).
 #
-# Local Mac (install on the machine you run Ansible from):
-#   localhost ansible_connection=local
+# --- Bonjour / mDNS (same LAN, DHCP-safe) ---
+# Ansible does not “discover” hosts automatically: you set ansible_host to the Mac’s
+# multicast DNS name. On the remote Mac: System Settings → General → Sharing → Local hostname,
+# or run: scutil --get LocalHostName  → use that value + ".local" (e.g. Marks-MacBook-Pro-2.local).
+# The controller must resolve that name (same subnet / IPv6 link-local mDNS is enough for most LANs).
 #
-# Remote Mac over SSH — static IP:
-#   my-mac ansible_host=10.0.0.5 ansible_user=you
+# --- Static IP (optional) ---
+# Replace ansible_host with an IP if you prefer: ansible_host=10.0.0.5
 #
-# Remote Mac on the same LAN — Bonjour / mDNS (survives DHCP IP changes):
-#   Use System Settings → General → Sharing → Local hostname (e.g. Marks-MacBook-Pro).
-#   SSH target is typically "<LocalHostname>.local" (see: scutil --get LocalHostName).
-#   Both machines must be on the same subnet (or otherwise able to resolve .local).
-#
-# Optional Linux builder (Monolith role installs OS packages + systemd service):
-#   builder ansible_host=10.0.0.20 ansible_user=runner
+# --- Linux self-hosted (optional) ---
+# Add a host with ansible_user set; Monolith installs packages + systemd there.
 
-# Option A — list hosts under github_runners:
 [github_runners]
 localhost ansible_connection=local
-# Second Mac on LAN (uncomment; LocalHostName from scutil --get LocalHostName, then .local):
-# marks-runner ansible_host=Marks-MacBook-Pro-2.local ansible_user=mballew
+marks-runner ansible_host=Marks-MacBook-Pro-2.local ansible_user=mballew
 
-# Option B — keep [mac_runners] and include it in github_runners (stops “ignoring github_runners” if you only use mac_runners):
+# Legacy: hosts only under mac_runners still run (playbook host pattern is github_runners:mac_runners).
 # [mac_runners]
-# localhost ansible_connection=local
-# [github_runners:children]
-# mac_runners
-
-# Legacy — playbook still matches mac_runners alone:
-# [mac_runners]
-# my-other-mac ansible_host=192.168.1.10 ansible_user=you
+# other ansible_host=10.0.0.12 ansible_user=you
