@@ -34,9 +34,100 @@ variable "github_runner_group_id" {
   default     = 1
 }
 
-# Optional: wire explicitly instead of env-only token
-# variable "cloudflare_api_token" {
-#   type        = string
-#   description = "Cloudflare API token"
-#   sensitive   = true
-# }
+variable "enable_github_actions_codebuild_backup" {
+  type        = bool
+  description = <<-EOT
+    Provision additional Linux CodeBuild GHA runner projects for the same GitHub repos with distinct
+    runs-on labels (e.g. ballai-backup). Use when you want a hot-standby pool or to test larger
+    compute without changing primary project names. Default false.
+  EOT
+  default     = false
+}
+
+variable "github_actions_codebuild_extra_repositories" {
+  type = map(object({
+    repository_name = string
+    description     = optional(string, "")
+    compute_type    = optional(string, "BUILD_GENERAL1_MEDIUM")
+    image           = optional(string, "aws/codebuild/amazonlinux-x86_64-standard:5.0")
+    environment     = optional(string, "LINUX_CONTAINER")
+  }))
+  description = <<-EOT
+    Optional extra CodeBuild GHA runner projects keyed by short name.
+  EOT
+  default     = {}
+}
+
+# --- Cloudflare Worker Secrets ---
+
+variable "worker_auth_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "together_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "tavily_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "kagi_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "serpapi_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "google_service_account_email" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "google_service_account_private_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "tiller_spreadsheet_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "tiller_personal_spreadsheet_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "tiller_business_spreadsheet_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "genius_scan_folder_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "duffel_api_token" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
