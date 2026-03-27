@@ -1,7 +1,6 @@
 variable "cloudflare_account_id" {
   type        = string
   description = "Cloudflare account ID (set via TF_VAR_cloudflare_account_id or terraform.tfvars)."
-  default     = "3ab81ea42c5731a9ea2fb65f9bf89548"
 }
 
 variable "domain" {

@@ -23,6 +23,11 @@ ansible/become_password
 ansible/.pw
 ansible/github_token
 
+# Environment variables (AWS creds, API tokens)
+.env
+.env.*
+!.env.example
+
 # OS / editor
 .DS_Store
 *.swp

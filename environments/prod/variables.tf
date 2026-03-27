@@ -63,71 +63,59 @@ variable "github_actions_codebuild_extra_repositories" {
 variable "worker_auth_secret" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "together_api_key" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "tavily_api_key" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "kagi_api_key" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "serpapi_key" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "google_service_account_email" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "google_service_account_private_key" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "tiller_spreadsheet_id" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "tiller_personal_spreadsheet_id" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "tiller_business_spreadsheet_id" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "genius_scan_folder_id" {
   type      = string
   sensitive = true
-  default   = ""
 }
 
 variable "duffel_api_token" {
   type      = string
   sensitive = true
-  default   = ""
 }
