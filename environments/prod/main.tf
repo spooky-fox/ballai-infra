@@ -4,21 +4,6 @@ module "ballai_worker" {
   name_prefix = var.name_prefix
   account_id  = var.cloudflare_account_id
 
-  worker_secret_names = toset([
-    "AUTH_SECRET",
-    "TOGETHER_API_KEY",
-    "TAVILY_API_KEY",
-    "KAGI_API_KEY",
-    "SERPAPI_KEY",
-    "GOOGLE_SERVICE_ACCOUNT_EMAIL",
-    "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
-    "TILLER_SPREADSHEET_ID",
-    "TILLER_PERSONAL_SPREADSHEET_ID",
-    "TILLER_BUSINESS_SPREADSHEET_ID",
-    "GENIUS_SCAN_FOLDER_ID",
-    "DUFFEL_API_TOKEN",
-  ])
-
   worker_secrets = {
     AUTH_SECRET                        = var.worker_auth_secret
     TOGETHER_API_KEY                   = var.together_api_key
@@ -48,27 +33,22 @@ module "github_actions_runners" {
     ballai = {
       repository_name = "ballai"
       description     = "Linux GitHub Actions jobs for Ballai app repo"
-      compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
     "ballai-infra" = {
       repository_name = "ballai-infra"
       description     = "Terraform CI and apply workflows"
-      compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
     "ballai-infra-prod" = {
       repository_name = "ballai-infra"
       description     = "Terraform workflows for environments/prod"
-      compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
     "ballai-infra-lanzo-web" = {
       repository_name = "ballai-infra"
       description     = "Terraform workflows for environments/prod/lanzo-web"
-      compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
     "lanzo-web" = {
       repository_name = "lanzo-web"
       description     = "Website build/lint/test workflows"
-      compute_type    = "BUILD_GENERAL1_MEDIUM"
     }
   }
 
