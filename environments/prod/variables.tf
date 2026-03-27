@@ -34,30 +34,6 @@ variable "github_runner_group_id" {
   default     = 1
 }
 
-variable "enable_github_actions_codebuild_backup" {
-  type        = bool
-  description = <<-EOT
-    Provision additional Linux CodeBuild GHA runner projects for the same GitHub repos with distinct
-    runs-on labels (e.g. ballai-backup). Use when you want a hot-standby pool or to test larger
-    compute without changing primary project names. Default false.
-  EOT
-  default     = false
-}
-
-variable "github_actions_codebuild_extra_repositories" {
-  type = map(object({
-    repository_name = string
-    description     = optional(string, "")
-    compute_type    = optional(string, "BUILD_GENERAL1_MEDIUM")
-    image           = optional(string, "aws/codebuild/amazonlinux-x86_64-standard:5.0")
-    environment     = optional(string, "LINUX_CONTAINER")
-  }))
-  description = <<-EOT
-    Optional extra CodeBuild GHA runner projects keyed by short name.
-  EOT
-  default     = {}
-}
-
 # --- Cloudflare Worker Secrets ---
 
 variable "worker_auth_secret" {
