@@ -19,7 +19,7 @@
 
 - name: Unregister runner from the GitHub  # noqa no-changed-when
   environment:
-    RUNNER_ALLOW_RUNASROOT: "1"
+    RUNNER_ALLOW_RUNASROOT: "{{ '1' if runner_user == 'root' else '0' }}"
     ACTIONS_RUNNER_INPUT_TOKEN: "{{ registration.json.token }}"
   ansible.builtin.command: "./config.sh remove --name '{{ runner_name }}' --unattended"
   args:
