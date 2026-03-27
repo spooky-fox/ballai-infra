@@ -1,0 +1,16 @@
+---
+skip_list:
+  - role-name
+  - name[missing]
+
+warn_list:
+  - no-changed-when
+  - command-instead-of-shell
+  - yaml[truthy]
+
+exclude_paths:
+  - roles/monolithprojects.github_actions_runner/
+
+enable_list:
+  - fqcn
+  - no-free-form
