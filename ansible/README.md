@@ -61,6 +61,37 @@ If you see it, add an empty **`[mac_runners]`** group (see **`inventory.example`
 
 The Monolith runner role is **vendored** under **`roles/monolithprojects.github_actions_runner/`** with ansible-core 2.20+ fixes (see **`roles/README.md`**).
 
+## Secrets Management
+
+Secrets can be provided through **Ansible Vault**, **plaintext files**, **environment variables**, or **AWS Secrets Manager**. The playbook resolves each secret using the first source that provides a value.
+
+### Ansible Vault (recommended for shared / versioned secrets)
+
+1. **Vault password file:** `cp .vault-password-file.example .vault-password-file`, replace the placeholder with your vault password, then `chmod 600 .vault-password-file`. `ansible.cfg` auto-loads it. In CI, write the password from a pipeline secret:
+
+   ```bash
+   echo "$VAULT_PASSWORD" > .vault-password-file
+   ```
+
+   Alternatively, set **`ANSIBLE_VAULT_PASSWORD_FILE`** to point at any file containing the password.
+
+2. **Encrypted variables:** `cp group_vars/all/vault.yml.example group_vars/all/vault.yml`, fill in real values, then encrypt:
+
+   ```bash
+   ansible-vault encrypt group_vars/all/vault.yml
+   ```
+
+   Variables defined there (e.g. `vault_github_token`, `vault_become_password`) are automatically loaded for every play targeting the `all` group.
+
+### Resolution order
+
+| Secret | Priority (first wins) |
+|--------|----------------------|
+| **GitHub PAT** | vault `vault_github_token` → `ansible/github_token` file → `GITHUB_TOKEN` / `PERSONAL_ACCESS_TOKEN` env |
+| **Become password** | vault `vault_become_password` → override file → `ansible/.pw` → `ansible/become_password` → `ANSIBLE_BECOME_PASSWORD` env → AWS Secrets Manager |
+
+Plaintext files (`github_token`, `.pw`, `become_password`) and the sync script (`scripts/sync_ansible_secrets_from_aws.sh`) still work exactly as before — vault is an additive layer.
+
 ## Requirements
 
 - **Python 3.12+** and **ansible-core 2.20+** (see `pyproject.toml`). The play asserts Ansible’s version at runtime.
