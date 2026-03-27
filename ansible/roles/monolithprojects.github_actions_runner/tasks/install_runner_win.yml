@@ -32,7 +32,7 @@
   community.windows.win_unzip:
     src: "%TEMP%\\actions-runner-{{ github_actions_system }}-{{ github_actions_architecture }}-{{ runner_version }}.zip"
     dest: "{{ runner_dir }}\\"
-    delete_archive: yes
+    delete_archive: true
   when: runner_installed.stdout is not defined or runner_version not in runner_installed.stdout or reinstall_runner
 
 - name: Configure custom env file if required
@@ -50,20 +50,8 @@
     path: "{{ runner_dir }}/.service"
   register: runner_service_file_path
 
-- name: Set complete GitHub url for repo runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/{{ github_owner | default(github_account) }}/{{ github_repo }}"
-  when: not runner_org and github_enterprise is not defined
-
-- name: Set complete GitHub url for org runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/{{ github_owner | default(github_account) }}"
-  when: runner_org | bool and github_enterprise is not defined
-
-- name: Set complete GitHub url for enterprise runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/enterprises/{{ github_enterprise }}"
-  when: github_enterprise is defined
+- name: Resolve GitHub URLs
+  ansible.builtin.include_tasks: resolve_github_url.yml
 
 - name: Register runner  # noqa no-changed-when
   environment:

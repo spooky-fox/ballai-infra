@@ -60,20 +60,8 @@
     path: "{{ runner_dir }}/.service"
   register: runner_service_file_path
 
-- name: Set complete GitHub url for repo runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/{{ github_owner | default(github_account) }}/{{ github_repo }}"
-  when: not runner_org and github_enterprise is not defined
-
-- name: Set complete GitHub url for org runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/{{ github_owner | default(github_account) }}"
-  when: runner_org | bool and github_enterprise is not defined
-
-- name: Set complete GitHub url for enterprise runner
-  ansible.builtin.set_fact:
-    github_full_url: "{{ github_url }}/enterprises/{{ github_enterprise }}"
-  when: github_enterprise is defined
+- name: Resolve GitHub URLs
+  ansible.builtin.include_tasks: resolve_github_url.yml
 
 - name: Register runner # noqa no-changed-when
   environment:
@@ -141,7 +129,7 @@
   args:
     chdir: "{{ runner_dir }}"
   changed_when: true
-  become: "{{ 'false' if ansible_facts.system == 'Darwin' else 'true' }}"
+  become: "{{ ansible_facts.system != 'Darwin' }}"
   when: not runner_service_file_path.stat.exists
 
 - name: Read service name from file
@@ -177,17 +165,18 @@
   args:
     chdir: "{{ runner_dir }}"
   changed_when: true
-  become: "{{ 'false' if ansible_facts.get('distribution', '') == 'MacOSX' else 'true' }}"
+  become: "{{ ansible_facts.get('distribution', '') != 'MacOSX' }}"
   no_log: "{{ hide_sensitive_logs | bool }}"
   ignore_errors: "{{ ansible_check_mode }}"
   when: runner_state|lower == "stopped"
 
+# TODO: Replace shell restart with systemd module when runner supports it
 - name: Version changed - RESTART Github Actions Runner service
-  ansible.builtin.shell: "./svc.sh stop && sleep 5 && ./svc.sh start"
+  ansible.builtin.shell: "./svc.sh stop && sleep 2 && ./svc.sh start"
   args:
     chdir: "{{ runner_dir }}"
   changed_when: true
-  become: "{{ 'false' if ansible_facts.system == 'Darwin' else 'true' }}"
+  become: "{{ ansible_facts.system != 'Darwin' }}"
   no_log: "{{ hide_sensitive_logs | bool }}"
   ignore_errors: "{{ ansible_check_mode }}"
   when: runner_version not in runner_installed.stdout and (runner_state | lower != 'stopped')
