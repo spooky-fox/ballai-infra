@@ -55,6 +55,7 @@
         fail_msg: >-
           Install ansible-core 2.20+ (cd ansible && uv sync) or use a venv +
           pip install -r ansible/requirements.txt.
+      tags: [always]
 
     - name: Normalize runner_labels to a list when passed as a string (-e runner_labels=a,b)
       ansible.builtin.set_fact:
@@ -74,6 +75,7 @@
             if (github_actions_runner_github_token_file | default('') | length > 0)
             else ((playbook_dir | dirname) ~ '/github_token')
           }}
+      tags: [always]
 
     - name: Stat GitHub token file on controller
       ansible.builtin.stat:
@@ -81,12 +83,14 @@
       delegate_to: localhost
       connection: local
       register: _gh_tok_stat
+      tags: [always]
 
     - name: Set access_token from file on controller
       ansible.builtin.set_fact:
         access_token: "{{ lookup('file', _github_token_path) | trim }}"
       when: _gh_tok_stat.stat.exists | default(false)
       no_log: true
+      tags: [always]
 
     - name: Set access_token from environment
       ansible.builtin.set_fact:
@@ -98,6 +102,7 @@
           }}
       when: not (_gh_tok_stat.stat.exists | default(false))
       no_log: true
+      tags: [always]
 
     # Become password: explicit path → .pw → become_password → ANSIBLE_BECOME_PASSWORD → AWS Secrets Manager
     - name: Stat override become password file on controller
@@ -107,6 +112,7 @@
       connection: local
       register: _stat_override_become_pw
       when: github_actions_runner_become_password_file | default('') | length > 0
+      tags: [always]
 
     - name: Require override become password file to exist
       ansible.builtin.assert:
@@ -115,6 +121,7 @@
         fail_msg: >-
           Become password file not found: {{ github_actions_runner_become_password_file }}
       when: github_actions_runner_become_password_file | default('') | length > 0
+      tags: [always]
 
     - name: Use override become password path
       ansible.builtin.set_fact:
@@ -122,6 +129,7 @@
       when:
         - github_actions_runner_become_password_file | default('') | length > 0
         - _stat_override_become_pw.stat.exists | default(false)
+      tags: [always]
 
     - name: Stat .pw on controller
       ansible.builtin.stat:
@@ -130,6 +138,7 @@
       connection: local
       register: _stat_dot_pw
       when: _become_password_path is not defined
+      tags: [always]
 
     - name: Use .pw when present
       ansible.builtin.set_fact:
@@ -137,6 +146,7 @@
       when:
         - _become_password_path is not defined
         - _stat_dot_pw.stat.exists | default(false)
+      tags: [always]
 
     - name: Stat become_password on controller (legacy filename)
       ansible.builtin.stat:
@@ -145,6 +155,7 @@
       connection: local
       register: _stat_legacy_become_pw
       when: _become_password_path is not defined
+      tags: [always]
 
     - name: Use become_password when present
       ansible.builtin.set_fact:
@@ -152,12 +163,14 @@
       when:
         - _become_password_path is not defined
         - _stat_legacy_become_pw.stat.exists | default(false)
+      tags: [always]
 
     - name: Load ansible_become_password from file
       ansible.builtin.set_fact:
         ansible_become_password: "{{ lookup('file', _become_password_path) | trim }}"
       when: _become_password_path is defined
       no_log: true
+      tags: [always]
 
     - name: Load ansible_become_password from environment
       ansible.builtin.set_fact:
@@ -166,6 +179,7 @@
         - (ansible_become_password | default('') | length) == 0
         - (lookup('env', 'ANSIBLE_BECOME_PASSWORD') | default('', true) | length) > 0
       no_log: true
+      tags: [always]
 
     - name: Load ansible_become_password from AWS Secrets Manager
       ansible.builtin.set_fact:
@@ -174,6 +188,7 @@
         - (ansible_become_password | default('') | length) == 0
         - ballai_ansible_become_secret_id | default('') | length > 0
       no_log: true
+      tags: [always]
 
     - name: Resolve Homebrew executable (macOS)
       ansible.builtin.shell: command -v brew
@@ -185,6 +200,7 @@
       changed_when: false
       become: false
       when: ansible_facts.system == 'Darwin'
+      tags: [always]
 
     - name: Require Homebrew on macOS runner hosts
       ansible.builtin.assert:
@@ -194,6 +210,7 @@
         fail_msg: >-
           Install Homebrew (https://brew.sh). gnu-tar is required so Ansible unarchive can use gtar.
       when: ansible_facts.system == 'Darwin'
+      tags: [always]
 
     - name: Ensure GNU tar formula (macOS) so ansible unarchive finds gtar
       ansible.builtin.command:
@@ -209,6 +226,7 @@
       failed_when: _brew_gnu_tar.rc != 0
       become: false
       when: ansible_facts.system == 'Darwin'
+      tags: [always]
 
   roles:
     - role: monolithprojects.github_actions_runner
@@ -226,6 +244,7 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
+      tags: [ci-tools]
 
     - name: Ensure Ballai CI brew toolchain (macOS)
       ansible.builtin.command:
@@ -245,3 +264,4 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
+      tags: [ci-tools]
