@@ -28,6 +28,11 @@ ansible/github_token
 .env.*
 !.env.example
 
+# Ansible vault
+ansible/.vault-password-file
+ansible/group_vars/all/vault.yml
+!ansible/group_vars/all/vault.yml.example
+
 # OS / editor
 .DS_Store
 *.swp

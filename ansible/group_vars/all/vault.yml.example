@@ -1,0 +1,10 @@
+---
+# Vault-encrypted secrets. To create the real file:
+#   cp vault.yml.example vault.yml
+#   # Fill in real values
+#   ansible-vault encrypt vault.yml
+#
+# Variables defined here can be referenced in playbooks as {{ vault_* }}
+
+vault_github_token: "ghp_REPLACE_WITH_REAL_TOKEN"
+vault_become_password: "REPLACE_WITH_REAL_PASSWORD"
