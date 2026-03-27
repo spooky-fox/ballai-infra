@@ -100,58 +100,31 @@
       no_log: true
 
     # Become password: explicit path → .pw → become_password → ANSIBLE_BECOME_PASSWORD → AWS Secrets Manager
-    - name: Stat override become password file on controller
+    - name: Search for become password file
       ansible.builtin.stat:
-        path: "{{ github_actions_runner_become_password_file }}"
+        path: "{{ item }}"
       delegate_to: localhost
       connection: local
-      register: _stat_override_become_pw
-      when: github_actions_runner_become_password_file | default('') | length > 0
-
-    - name: Require override become password file to exist
-      ansible.builtin.assert:
-        that:
-          - _stat_override_become_pw.stat.exists | default(false)
-        fail_msg: >-
-          Become password file not found: {{ github_actions_runner_become_password_file }}
-      when: github_actions_runner_become_password_file | default('') | length > 0
-
-    - name: Use override become password path
-      ansible.builtin.set_fact:
-        _become_password_path: "{{ github_actions_runner_become_password_file }}"
-      when:
-        - github_actions_runner_become_password_file | default('') | length > 0
-        - _stat_override_become_pw.stat.exists | default(false)
-
-    - name: Stat .pw on controller
-      ansible.builtin.stat:
-        path: "{{ (playbook_dir | dirname) ~ '/.pw' }}"
-      delegate_to: localhost
-      connection: local
-      register: _stat_dot_pw
-      when: _become_password_path is not defined
-
-    - name: Use .pw when present
-      ansible.builtin.set_fact:
-        _become_password_path: "{{ (playbook_dir | dirname) ~ '/.pw' }}"
+      become: false
+      register: _become_pw_candidates
+      loop:
+        - "{{ github_actions_runner_become_password_file | default('') }}"
+        - "{{ (playbook_dir | dirname) ~ '/.pw' }}"
+        - "{{ (playbook_dir | dirname) ~ '/become_password' }}"
       when:
         - _become_password_path is not defined
-        - _stat_dot_pw.stat.exists | default(false)
+        - item | length > 0
 
-    - name: Stat become_password on controller (legacy filename)
-      ansible.builtin.stat:
-        path: "{{ (playbook_dir | dirname) ~ '/become_password' }}"
-      delegate_to: localhost
-      connection: local
-      register: _stat_legacy_become_pw
-      when: _become_password_path is not defined
-
-    - name: Use become_password when present
+    - name: Use first existing become password file
       ansible.builtin.set_fact:
-        _become_password_path: "{{ (playbook_dir | dirname) ~ '/become_password' }}"
+        _become_password_path: "{{ item.item }}"
+      loop: "{{ _become_pw_candidates.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item | default('skipped') }}"
       when:
         - _become_password_path is not defined
-        - _stat_legacy_become_pw.stat.exists | default(false)
+        - item.stat is defined
+        - item.stat.exists | default(false)
 
     - name: Load ansible_become_password from file
       ansible.builtin.set_fact:
@@ -195,18 +168,18 @@
           Install Homebrew (https://brew.sh). gnu-tar is required so Ansible unarchive can use gtar.
       when: ansible_facts.system == 'Darwin'
 
+    - name: Cache Homebrew path (macOS)
+      ansible.builtin.set_fact:
+        _brew_path: "{{ _brew_cmd.stdout | trim }}"
+      when:
+        - ansible_facts.system == 'Darwin'
+        - _brew_cmd is defined
+        - _brew_cmd.rc == 0
+
     - name: Ensure GNU tar formula (macOS) so ansible unarchive finds gtar
-      ansible.builtin.command:
-        argv:
-          - "{{ _brew_cmd.stdout | trim }}"
-          - install
-          - gnu-tar
-      environment:
-        HOMEBREW_NONINTERACTIVE: "1"
-        HOMEBREW_NO_AUTO_UPDATE: "1"
-      register: _brew_gnu_tar
-      changed_when: false
-      failed_when: _brew_gnu_tar.rc != 0
+      community.general.homebrew:
+        name: gnu-tar
+        state: present
       become: false
       when: ansible_facts.system == 'Darwin'
 
@@ -214,33 +187,13 @@
     - role: monolithprojects.github_actions_runner
 
   post_tasks:
-    - name: Resolve Homebrew for CI toolchain (macOS)
-      ansible.builtin.shell: command -v brew
-      args:
-        executable: /bin/bash
-      environment:
-        PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
-      register: _brew_cmd_ci
-      changed_when: false
-      become: false
-      when:
-        - ansible_facts.system == 'Darwin'
-        - ballai_runner_install_ci_tools | bool
-
-    - name: Ensure Ballai CI brew toolchain (macOS)
-      ansible.builtin.command:
-        argv:
-          - "{{ _brew_cmd_ci.stdout | trim }}"
-          - install
-          - swiftlint
-          - xcodegen
-          - xcbeautify
-      environment:
-        HOMEBREW_NONINTERACTIVE: "1"
-        HOMEBREW_NO_AUTO_UPDATE: "1"
-      register: _brew_ci_tools
-      changed_when: false
-      failed_when: _brew_ci_tools.rc != 0
+    - name: Ensure CI tool formulae (macOS)
+      community.general.homebrew:
+        name:
+          - jq
+          - gh
+          - coreutils
+        state: present
       become: false
       when:
         - ansible_facts.system == 'Darwin'
