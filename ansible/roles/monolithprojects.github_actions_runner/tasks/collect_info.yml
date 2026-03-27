@@ -25,7 +25,6 @@
           Accept: "application/vnd.github.v3+json"
         method: POST
         status_code: 201
-        force_basic_auth: true
       register: registration
       delegate_to: localhost
       become: false
@@ -39,7 +38,6 @@
           Accept: "application/vnd.github.v3+json"
         method: GET
         status_code: 200
-        force_basic_auth: true
       vars:
         query_params:
           per_page: "{{ github_api_runners_per_page }}"
