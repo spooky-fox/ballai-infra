@@ -6,6 +6,38 @@ locals {
       repo_url     = "https://github.com/${var.github_owner}/${repo.repository_name}.git"
     })
   }
+
+  alarm_definitions = {
+    queued_duration_p95 = {
+      metric_name = "QueuedDuration"
+      threshold   = 120
+      period      = 60
+      name_suffix = "queued-duration-p95"
+      description = "CodeBuild GitHub runner queue duration p95 is elevated."
+    }
+    duration_p95 = {
+      metric_name = "Duration"
+      threshold   = 1800
+      period      = 300
+      name_suffix = "duration-p95"
+      description = "CodeBuild GitHub runner execution duration is elevated."
+    }
+  }
+
+  alarm_instances = merge([
+    for alarm_key, alarm in local.alarm_definitions : {
+      for proj_key, proj in local.projects :
+      "${proj_key}:${alarm_key}" => {
+        project_key  = proj_key
+        project_name = proj.project_name
+        metric_name  = alarm.metric_name
+        threshold    = alarm.threshold
+        period       = alarm.period
+        name_suffix  = alarm.name_suffix
+        description  = alarm.description
+      }
+    }
+  ]...)
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -38,7 +70,10 @@ data "aws_iam_policy_document" "codebuild_permissions" {
       "logs:CreateLogStream",
       "logs:PutLogEvents"
     ]
-    resources = ["*"]
+    resources = [
+      aws_cloudwatch_log_group.runner[each.key].arn,
+      "${aws_cloudwatch_log_group.runner[each.key].arn}:*"
+    ]
   }
 }
 
@@ -122,44 +157,23 @@ resource "aws_codebuild_webhook" "runner" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "queued_duration_p95" {
-  for_each = var.enable_alarms ? local.projects : {}
+resource "aws_cloudwatch_metric_alarm" "this" {
+  for_each = var.enable_alarms ? local.alarm_instances : {}
 
-  alarm_name          = "${each.value.project_name}-queued-duration-p95"
-  alarm_description   = "CodeBuild GitHub runner queue duration p95 is elevated."
+  alarm_name          = "${each.value.project_name}-${each.value.name_suffix}"
+  alarm_description   = each.value.description
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
-  threshold           = 120
+  threshold           = each.value.threshold
   treat_missing_data  = "notBreaching"
   namespace           = "AWS/CodeBuild"
-  metric_name         = "QueuedDuration"
-  period              = 60
+  metric_name         = each.value.metric_name
+  period              = each.value.period
   extended_statistic  = "p95"
   alarm_actions       = var.alarm_actions
   ok_actions          = var.alarm_actions
 
   dimensions = {
-    ProjectName = aws_codebuild_project.runner[each.key].name
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "duration_p95" {
-  for_each = var.enable_alarms ? local.projects : {}
-
-  alarm_name          = "${each.value.project_name}-duration-p95"
-  alarm_description   = "CodeBuild GitHub runner execution duration is elevated."
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  threshold           = 1800
-  treat_missing_data  = "notBreaching"
-  namespace           = "AWS/CodeBuild"
-  metric_name         = "Duration"
-  period              = 300
-  extended_statistic  = "p95"
-  alarm_actions       = var.alarm_actions
-  ok_actions          = var.alarm_actions
-
-  dimensions = {
-    ProjectName = aws_codebuild_project.runner[each.key].name
+    ProjectName = aws_codebuild_project.runner[each.value.project_key].name
   }
 }
