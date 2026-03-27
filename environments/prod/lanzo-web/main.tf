@@ -1,3 +1,20 @@
+locals {
+  contact_email = "ballew@spookyfox.com"
+
+  pages_deploy_config = {
+    compatibility_date  = "2026-03-16"
+    compatibility_flags = ["nodejs_compat"]
+    fail_open           = true
+    usage_model         = "standard"
+    env_vars = var.formspree_form_id != "" ? {
+      NEXT_PUBLIC_FORMSPREE_FORM_ID = {
+        type  = "plain_text"
+        value = var.formspree_form_id
+      }
+    } : {}
+  }
+}
+
 # --- Zone ---
 # Moves DNS to Cloudflare (historically from Route53).
 # After apply, ensure registrar nameservers match output nameservers.
@@ -26,30 +43,8 @@ resource "cloudflare_pages_project" "lanzo" {
   }
 
   deployment_configs = {
-    production = {
-      compatibility_date  = "2026-03-16"
-      compatibility_flags = ["nodejs_compat"]
-      fail_open           = true
-      usage_model         = "standard"
-      env_vars = var.formspree_form_id != "" ? {
-        NEXT_PUBLIC_FORMSPREE_FORM_ID = {
-          type  = "plain_text"
-          value = var.formspree_form_id
-        }
-      } : {}
-    }
-    preview = {
-      compatibility_date  = "2026-03-16"
-      compatibility_flags = ["nodejs_compat"]
-      fail_open           = true
-      usage_model         = "standard"
-      env_vars = var.formspree_form_id != "" ? {
-        NEXT_PUBLIC_FORMSPREE_FORM_ID = {
-          type  = "plain_text"
-          value = var.formspree_form_id
-        }
-      } : {}
-    }
+    production = local.pages_deploy_config
+    preview    = local.pages_deploy_config
   }
 }
 
@@ -100,7 +95,7 @@ resource "cloudflare_dns_record" "google_verification" {
 
 resource "cloudflare_email_routing_address" "destination" {
   account_id = var.cloudflare_account_id
-  email      = "ballew@spookyfox.com"
+  email      = local.contact_email
 }
 
 locals {
@@ -130,6 +125,6 @@ resource "cloudflare_email_routing_rule" "aliases" {
 
   actions = [{
     type  = "forward"
-    value = ["ballew@spookyfox.com"]
+    value = [local.contact_email]
   }]
 }
