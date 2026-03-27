@@ -25,6 +25,10 @@ resource "cloudflare_zone" "lanzo" {
   }
   name = var.domain
   type = "full"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # --- Pages Project ---

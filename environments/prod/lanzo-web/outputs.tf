@@ -4,17 +4,21 @@ output "nameservers" {
 }
 
 output "zone_id" {
-  value = cloudflare_zone.lanzo.id
+  description = "Cloudflare zone ID for the domain."
+  value       = cloudflare_zone.lanzo.id
 }
 
 output "zone_status" {
-  value = cloudflare_zone.lanzo.status
+  description = "Activation status of the Cloudflare zone."
+  value       = cloudflare_zone.lanzo.status
 }
 
 output "pages_domain_status" {
-  value = cloudflare_pages_domain.apex.status
+  description = "Status of the Cloudflare Pages custom domain."
+  value       = cloudflare_pages_domain.apex.status
 }
 
 output "pages_subdomain" {
-  value = cloudflare_pages_project.lanzo.subdomain
+  description = "Default subdomain assigned by Cloudflare Pages."
+  value       = cloudflare_pages_project.lanzo.subdomain
 }

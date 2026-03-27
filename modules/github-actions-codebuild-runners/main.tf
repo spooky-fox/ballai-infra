@@ -57,6 +57,10 @@ resource "aws_iam_role" "codebuild" {
   name               = "${each.value.project_name}-service-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
   tags               = var.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 data "aws_iam_policy_document" "codebuild_permissions" {
