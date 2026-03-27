@@ -61,11 +61,13 @@
       ansible.builtin.set_fact:
         runner_labels: "{{ runner_labels.split(',') | map('trim') | reject('equalto', '') | list }}"
       when: runner_labels is string
+      tags: [always]
 
     - name: Normalize pinned runner_version (Monolith tarball URLs use v2.3.4 with no leading v in var)
       ansible.builtin.set_fact:
         runner_version: "{{ (runner_version | string) | regex_replace('^v', '') }}"
       when: (runner_version | string) != 'latest'
+      tags: [always]
 
     - name: Resolve GitHub token file path on controller
       ansible.builtin.set_fact:
@@ -85,10 +87,19 @@
       register: _gh_tok_stat
       tags: [always]
 
+    - name: Set access_token from vault
+      ansible.builtin.set_fact:
+        access_token: "{{ vault_github_token }}"
+      when: vault_github_token | default('') | length > 0
+      no_log: true
+      tags: [always]
+
     - name: Set access_token from file on controller
       ansible.builtin.set_fact:
         access_token: "{{ lookup('file', _github_token_path) | trim }}"
-      when: _gh_tok_stat.stat.exists | default(false)
+      when:
+        - access_token | default('') | length == 0
+        - _gh_tok_stat.stat.exists | default(false)
       no_log: true
       tags: [always]
 
@@ -100,11 +111,19 @@
             | default(lookup('env', 'PERSONAL_ACCESS_TOKEN'), true)
             | default('', true)
           }}
-      when: not (_gh_tok_stat.stat.exists | default(false))
+      when:
+        - access_token | default('') | length == 0
+        - not (_gh_tok_stat.stat.exists | default(false))
       no_log: true
       tags: [always]
 
-    # Become password: explicit path → .pw → become_password → ANSIBLE_BECOME_PASSWORD → AWS Secrets Manager
+    # Become password: vault → explicit path → .pw → become_password → ANSIBLE_BECOME_PASSWORD → AWS Secrets Manager
+    - name: Load ansible_become_password from vault
+      ansible.builtin.set_fact:
+        ansible_become_password: "{{ vault_become_password }}"
+      when: vault_become_password | default('') | length > 0
+      no_log: true
+      tags: [always]
     - name: Search for become password file
       ansible.builtin.stat:
         path: "{{ item }}"
@@ -179,14 +198,6 @@
           Install Homebrew (https://brew.sh). gnu-tar is required so Ansible unarchive can use gtar.
       when: ansible_facts.system == 'Darwin'
       tags: [always]
-
-    - name: Cache Homebrew path (macOS)
-      ansible.builtin.set_fact:
-        _brew_path: "{{ _brew_cmd.stdout | trim }}"
-      when:
-        - ansible_facts.system == 'Darwin'
-        - _brew_cmd is defined
-        - _brew_cmd.rc == 0
 
     - name: Ensure GNU tar formula (macOS) so ansible unarchive finds gtar
       community.general.homebrew:

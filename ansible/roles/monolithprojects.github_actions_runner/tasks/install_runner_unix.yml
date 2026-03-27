@@ -164,7 +164,7 @@
   args:
     chdir: "{{ runner_dir }}"
   changed_when: true
-  become: "{{ ansible_facts.get('distribution', '') != 'MacOSX' }}"
+  become: "{{ ansible_facts.system != 'Darwin' }}"
   no_log: "{{ hide_sensitive_logs | bool }}"
   ignore_errors: "{{ ansible_check_mode }}"
   when: runner_state|lower == "stopped"

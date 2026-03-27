@@ -1,6 +1,6 @@
 # Ansible (GitHub Actions self-hosted runners)
 
-Provisions the official [actions/runner](https://github.com/actions/runner) on **macOS or Linux** using the Galaxy role **[monolithprojects.github_actions_runner](https://github.com/MonolithProjects/ansible-github_actions_runner)** (MonolithProjects), plus **Ballai-only** extras on macOS (Homebrew **gnu-tar** for `ansible.builtin.unarchive`, and **swiftlint** / **xcodegen** / **xcbeautify**).
+Provisions the official [actions/runner](https://github.com/actions/runner) on **macOS or Linux** using the Galaxy role **[monolithprojects.github_actions_runner](https://github.com/MonolithProjects/ansible-github_actions_runner)** (MonolithProjects), plus **Ballai-only** extras on macOS (Homebrew **gnu-tar** for `ansible.builtin.unarchive`, and **jq** / **gh** / **coreutils**).
 
 Default registration: repository **`spooky-fox/ballai`** with label **`ballai-ci`**, install dir **`$HOME/actions-runner`**.
 
@@ -129,7 +129,7 @@ Playbook variables (Ballai / legacy names) map into the Monolith role as shown.
 | `github_actions_runner_github_token_file` | `""` | Override path to token file (else `ansible/github_token`) |
 | `github_actions_runner_become_password_file` | `""` | Override path to sudo password file (must exist if set) |
 | `ballai_ansible_become_secret_id` | from env `BALLAI_ANSIBLE_BECOME_SECRET_ID` | If set and password still unset, load via `amazon.aws.aws_secret` lookup |
-| `github_actions_runner_install_ci_tools` | `true` | macOS only: `brew install` swiftlint, xcodegen, xcbeautify after the role |
+| `github_actions_runner_install_ci_tools` | `true` | macOS only: `brew install` jq, gh, coreutils after the role |
 
 ### Monolith role knobs (advanced CI)
 

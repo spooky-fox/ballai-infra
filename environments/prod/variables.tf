@@ -1,7 +1,11 @@
 variable "cloudflare_account_id" {
   type        = string
   description = "Cloudflare account ID (set via TF_VAR_cloudflare_account_id or terraform.tfvars)."
-  default     = "00000000000000000000000000000000"
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{32}$", var.cloudflare_account_id))
+    error_message = "Must be a 32-character hex Cloudflare account ID."
+  }
 }
 
 variable "name_prefix" {
