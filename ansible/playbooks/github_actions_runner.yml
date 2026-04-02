@@ -43,6 +43,13 @@
     github_actions_runner_github_token_file: ""
     github_actions_runner_become_password_file: ""
     ballai_runner_install_ci_tools: "{{ github_actions_runner_install_ci_tools | default(true) | bool }}"
+    # Android tooling is optional and disabled by default (large install footprint).
+    ballai_runner_install_android_tools: "{{ github_actions_runner_install_android_tools | default(false) | bool }}"
+    ballai_runner_install_android_emulator_stack: "{{ github_actions_runner_install_android_emulator_stack | default(false) | bool }}"
+    ballai_runner_android_sdk_root: "{{ ansible_facts['env']['HOME'] }}/Library/Android/sdk"
+    ballai_runner_android_api_level: "{{ github_actions_runner_android_api_level | default('35') }}"
+    ballai_runner_android_system_image: "{{ github_actions_runner_android_system_image | default('google_apis_playstore') }}"
+    ballai_runner_android_abi: "{{ github_actions_runner_android_abi | default('arm64-v8a') }}"
     # Plain secret id or ARN; set via env for CI/automation (requires ansible-galaxy collection install amazon.aws).
     ballai_ansible_become_secret_id: "{{ lookup('env', 'BALLAI_ANSIBLE_BECOME_SECRET_ID') | default('', true) }}"
 
@@ -214,12 +221,133 @@
     - name: Ensure CI tool formulae (macOS)
       community.general.homebrew:
         name:
+          - swiftlint
+          - xcodegen
+          - xcbeautify
           - jq
           - gh
           - coreutils
+          - node
+          - wget
+          - yq
+          - awscli
+          - mas
         state: present
       become: false
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
       tags: [ci-tools]
+
+    - name: Ensure network diagnostic tools (macOS)
+      community.general.homebrew:
+        name:
+          - mtr
+          - nmap
+          - telnet
+        state: present
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_ci_tools | bool
+      tags: [ci-tools]
+
+    - name: Ensure CI tool casks (macOS)
+      community.general.homebrew_cask:
+        name:
+          - 1password
+          - 1password-cli
+        state: present
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_ci_tools | bool
+      tags: [ci-tools]
+
+    - name: Ensure Android Homebrew formulae (macOS)
+      community.general.homebrew:
+        name:
+          - openjdk
+          - android-platform-tools
+        state: present
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+      tags: [android-tools]
+
+    - name: Ensure Android command line tools cask (macOS)
+      community.general.homebrew_cask:
+        name:
+          - android-commandlinetools
+        state: present
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+      tags: [android-tools]
+
+    - name: Ensure Android SDK root exists (macOS)
+      ansible.builtin.file:
+        path: "{{ ballai_runner_android_sdk_root }}"
+        state: directory
+        mode: "0755"
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+      tags: [android-tools]
+
+    - name: Ensure Android SDK cmdline-tools latest is installed
+      ansible.builtin.command:
+        argv:
+          - sdkmanager
+          - "--sdk_root={{ ballai_runner_android_sdk_root }}"
+          - cmdline-tools;latest
+      environment:
+        PATH: "/opt/homebrew/opt/openjdk/bin:/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+        ANDROID_SDK_ROOT: "{{ ballai_runner_android_sdk_root }}"
+      changed_when: false
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+      tags: [android-tools]
+
+    - name: Accept Android SDK licenses (idempotent)
+      ansible.builtin.shell: |
+        set -o pipefail
+        yes | sdkmanager --sdk_root="{{ ballai_runner_android_sdk_root }}" --licenses
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "/opt/homebrew/opt/openjdk/bin:/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+        ANDROID_SDK_ROOT: "{{ ballai_runner_android_sdk_root }}"
+      register: _android_license_result
+      failed_when: _android_license_result.rc not in [0, 141]
+      changed_when: false
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+      tags: [android-tools]
+
+    - name: Ensure Android emulator stack packages are installed
+      ansible.builtin.command:
+        argv:
+          - sdkmanager
+          - "--sdk_root={{ ballai_runner_android_sdk_root }}"
+          - platform-tools
+          - emulator
+          - "platforms;android-{{ ballai_runner_android_api_level }}"
+          - "system-images;android-{{ ballai_runner_android_api_level }};{{ ballai_runner_android_system_image }};{{ ballai_runner_android_abi }}"
+      environment:
+        PATH: "/opt/homebrew/opt/openjdk/bin:/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+        ANDROID_SDK_ROOT: "{{ ballai_runner_android_sdk_root }}"
+      changed_when: false
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_android_tools | bool
+        - ballai_runner_install_android_emulator_stack | bool
+      tags: [android-tools]

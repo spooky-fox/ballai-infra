@@ -1,6 +1,6 @@
 # Ansible (GitHub Actions self-hosted runners)
 
-Provisions the official [actions/runner](https://github.com/actions/runner) on **macOS or Linux** using the Galaxy role **[monolithprojects.github_actions_runner](https://github.com/MonolithProjects/ansible-github_actions_runner)** (MonolithProjects), plus **Ballai-only** extras on macOS (Homebrew **gnu-tar** for `ansible.builtin.unarchive`, and **jq** / **gh** / **coreutils**).
+Provisions the official [actions/runner](https://github.com/actions/runner) on **macOS or Linux** using the Galaxy role **[monolithprojects.github_actions_runner](https://github.com/MonolithProjects/ansible-github_actions_runner)** (MonolithProjects), plus **Ballai-only** extras on macOS (Homebrew **gnu-tar** for `ansible.builtin.unarchive`, CI tools, and optional Android SDK tooling).
 
 Default registration: repository **`spooky-fox/ballai`** with label **`ballai-ci`**, install dir **`$HOME/actions-runner`**.
 
@@ -130,6 +130,27 @@ Playbook variables (Ballai / legacy names) map into the Monolith role as shown.
 | `github_actions_runner_become_password_file` | `""` | Override path to sudo password file (must exist if set) |
 | `ballai_ansible_become_secret_id` | from env `BALLAI_ANSIBLE_BECOME_SECRET_ID` | If set and password still unset, load via `amazon.aws.aws_secret` lookup |
 | `github_actions_runner_install_ci_tools` | `true` | macOS only: `brew install` jq, gh, coreutils after the role |
+| `github_actions_runner_install_android_tools` | `false` | macOS only: install Android CLI prerequisites (`openjdk`, `android-commandlinetools`, `android-platform-tools`) and accept licenses |
+| `github_actions_runner_install_android_emulator_stack` | `false` | macOS only: install emulator/image packages via `sdkmanager` (large footprint) |
+| `github_actions_runner_android_api_level` | `35` | Android API level for emulator stack package install |
+| `github_actions_runner_android_system_image` | `google_apis_playstore` | System image channel for emulator stack |
+| `github_actions_runner_android_abi` | `arm64-v8a` | ABI used for system image install |
+
+### Optional: Android emulator tooling on macOS runners
+
+Enable only when that runner host will run Android/emulator jobs:
+
+```bash
+uv run ansible-playbook -i inventory playbooks/github_actions_runner.yml \
+  -e github_actions_runner_install_android_tools=true \
+  -e github_actions_runner_install_android_emulator_stack=true
+```
+
+For lightweight setup (no system images/emulator downloads), set only:
+
+```bash
+-e github_actions_runner_install_android_tools=true
+```
 
 ### Monolith role knobs (advanced CI)
 
