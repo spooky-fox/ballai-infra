@@ -1,8 +1,6 @@
 ---
 ballai_tailscale_host: macbookpro.tail1b3be.ts.net
 ballai_fallback_host: ""
-# Shared machine — ballew user has NOPASSWD sudo; skip become password.
 ansible_become_password: ""
 ballai_runner_shared_machine: true
-# LaunchDaemon (runs as ballew at boot) instead of LaunchAgent (needs logged-in user).
 ballai_runner_use_launchdaemon: true

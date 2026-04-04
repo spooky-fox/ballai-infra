@@ -25,6 +25,6 @@
 [mac_runners]
 
 [github_runners]
-m1-mac-mini  ansible_host=m1.tail1b3be.ts.net        ansible_user=mballew
+m1-mac-mini  ansible_host=m1.tail1b3be.ts.net        ansible_user=ghrunner
 ballew-4     ansible_host=bsl.tail1b3be.ts.net       ansible_user=ballew
-macbookpro   ansible_host=macbookpro.tail1b3be.ts.net ansible_user=ballew
+macbookpro   ansible_host=macbookpro.tail1b3be.ts.net ansible_user=ghrunner
