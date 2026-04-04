@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.github.actions.runner</string>
+  <key>UserName</key>
+  <string>{{ runner_user }}</string>
+  <key>GroupName</key>
+  <string>staff</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ runner_dir }}/run.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>{{ runner_dir }}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>{{ runner_dir }}/_diag/runner-stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ runner_dir }}/_diag/runner-stderr.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>DEVELOPER_DIR</key>
+    <string>/Applications/Xcode.app/Contents/Developer</string>
+  </dict>
+</dict>
+</plist>

@@ -23,7 +23,7 @@
 - name: GitHub Actions self-hosted runner (MonolithProjects + Ballai extras)
   # Union so existing inventories using [mac_runners] keep working.
   hosts: github_runners:mac_runners
-  gather_facts: true
+  gather_facts: false
   # Do not set become: true here — gather_facts would run before pre_tasks load .pw / Secrets Manager.
   become: false
 
@@ -43,6 +43,14 @@
     github_actions_runner_github_token_file: ""
     github_actions_runner_become_password_file: ""
     ballai_runner_install_ci_tools: "{{ github_actions_runner_install_ci_tools | default(true) | bool }}"
+    # Shared machines (e.g. another user's laptop): only install CI formulae, skip casks and
+    # network tools that could conflict with the primary user's setup. Never remove anything.
+    ballai_runner_shared_machine: "{{ ballai_runner_shared_machine | default(false) | bool }}"
+    # Use a LaunchDaemon (runs at boot as runner_user) instead of a LaunchAgent (needs desktop login).
+    ballai_runner_use_launchdaemon: "{{ ballai_runner_use_launchdaemon | default(false) | bool }}"
+    # Xcode and simulator setup.
+    ballai_runner_install_xcode: "{{ github_actions_runner_install_xcode | default(true) | bool }}"
+    ballai_runner_ios_simulator_platform: iOS
     # Android tooling is optional and disabled by default (large install footprint).
     ballai_runner_install_android_tools: "{{ github_actions_runner_install_android_tools | default(false) | bool }}"
     ballai_runner_install_android_emulator_stack: "{{ github_actions_runner_install_android_emulator_stack | default(false) | bool }}"
@@ -54,6 +62,36 @@
     ballai_ansible_become_secret_id: "{{ lookup('env', 'BALLAI_ANSIBLE_BECOME_SECRET_ID') | default('', true) }}"
 
   pre_tasks:
+    # ── Tailscale → LAN fallback ────────────────────────────────────────
+    - name: Probe Tailscale connectivity
+      ansible.builtin.command:
+        cmd: "nc -z -w 5 {{ ballai_tailscale_host }} 22"
+      delegate_to: localhost
+      connection: local
+      register: _ts_probe
+      ignore_errors: true
+      changed_when: false
+      check_mode: false
+      when: ballai_tailscale_host | default('') | length > 0
+      tags: [always]
+
+    - name: Fall back to LAN/Bonjour when Tailscale is unreachable
+      ansible.builtin.set_fact:
+        ansible_host: "{{ ballai_fallback_host }}"
+      when:
+        - ballai_fallback_host | default('') | length > 0
+        - _ts_probe is failed or _ts_probe is skipped
+      tags: [always]
+
+    - name: Report selected host
+      ansible.builtin.debug:
+        msg: "Connecting to {{ inventory_hostname }} via {{ ansible_host }}"
+      tags: [always]
+
+    - name: Gather facts
+      ansible.builtin.setup:
+      tags: [always]
+
     - name: Require ansible-core 2.20 or newer
       ansible.builtin.assert:
         that:
@@ -250,6 +288,7 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
+        - not ballai_runner_shared_machine
       tags: [ci-tools]
 
     - name: Ensure CI tool casks (macOS)
@@ -262,7 +301,115 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
+        - not ballai_runner_shared_machine
       tags: [ci-tools]
+
+    # ── Xcode setup ──────────────────────────────────────────────────────
+    - name: Check if Xcode.app is installed
+      ansible.builtin.stat:
+        path: /Applications/Xcode.app
+      register: _xcode_app
+      when: ansible_facts.system == 'Darwin'
+      tags: [xcode]
+
+    - name: Install Xcode from App Store via mas
+      ansible.builtin.command:
+        cmd: mas install 497799835
+      environment:
+        PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
+      become: true
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+        - not (_xcode_app.stat.exists | default(false))
+      changed_when: true
+      tags: [xcode]
+
+    - name: Point xcode-select at Xcode.app
+      ansible.builtin.command:
+        cmd: xcode-select -s /Applications/Xcode.app/Contents/Developer
+      become: true
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+      changed_when: false
+      tags: [xcode]
+
+    - name: Accept Xcode license
+      ansible.builtin.command:
+        cmd: xcodebuild -license accept
+      become: true
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+      changed_when: false
+      tags: [xcode]
+
+    - name: Run Xcode first launch setup
+      ansible.builtin.command:
+        cmd: xcodebuild -runFirstLaunch
+      become: true
+      register: _xcode_first_launch
+      failed_when: _xcode_first_launch.rc not in [0, 69]
+      changed_when: _xcode_first_launch.rc == 0
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+      tags: [xcode]
+
+    - name: Check installed iOS simulator runtimes
+      ansible.builtin.command:
+        cmd: xcrun simctl list runtimes -j
+      register: _sim_runtimes
+      changed_when: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+      tags: [xcode]
+
+    - name: Download latest iOS simulator if missing
+      ansible.builtin.command:
+        cmd: "xcodebuild -downloadPlatform {{ ballai_runner_ios_simulator_platform }}"
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+        - >-
+          (_sim_runtimes.stdout | from_json).runtimes
+          | selectattr('platform', 'equalto', 'iOS')
+          | selectattr('isAvailable', 'equalto', true)
+          | list | length == 0
+      changed_when: true
+      tags: [xcode]
+
+    # ── LaunchDaemon for shared machines ─────────────────────────────────
+    - name: Install runner LaunchDaemon (shared machines)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/runner-launchdaemon.plist.j2"
+        dest: /Library/LaunchDaemons/com.github.actions.runner.plist
+        owner: root
+        group: wheel
+        mode: "0644"
+      become: true
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_use_launchdaemon | bool
+      notify: reload runner launchdaemon
+      tags: [runner-service]
+
+    - name: Ensure NOPASSWD sudo for runner user (shared machines)
+      ansible.builtin.lineinfile:
+        path: "/etc/sudoers.d/{{ runner_user }}"
+        line: "{{ runner_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: true
+        owner: root
+        group: wheel
+        mode: "0440"
+        validate: "visudo -cf %s"
+      become: true
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_use_launchdaemon | bool
+      tags: [runner-service]
 
     - name: Ensure Android Homebrew formulae (macOS)
       community.general.homebrew:
@@ -351,3 +498,10 @@
         - ballai_runner_install_android_tools | bool
         - ballai_runner_install_android_emulator_stack | bool
       tags: [android-tools]
+
+  handlers:
+    - name: reload runner launchdaemon
+      ansible.builtin.shell: |
+        launchctl unload /Library/LaunchDaemons/com.github.actions.runner.plist 2>/dev/null || true
+        launchctl load /Library/LaunchDaemons/com.github.actions.runner.plist
+      become: true

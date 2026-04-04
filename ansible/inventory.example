@@ -2,26 +2,29 @@
 #
 # The playbook targets hosts in [github_runners] OR [mac_runners] (union).
 #
-# --- ansible_host: LAN IP vs .local ---
-# Use a static LAN IP (below) when mDNS is flaky or `host Name.local` returns NXDOMAIN — that is
-# normal: `host`/`dig` use unicast DNS, not Bonjour. SSH/OpenSSH still resolves .local via mDNS on
-# macOS when it works. If the other Mac’s DHCP address changes, update this IP or switch to .local.
+# --- Tailscale → LAN fallback ---
+# Set ansible_host to the Tailscale MagicDNS name (<hostname>.tail1b3be.ts.net).
+# Define ballai_tailscale_host and ballai_fallback_host in host_vars/<name>.yml.
+# The playbook probes Tailscale first (port 22, 5s timeout) and falls back to
+# the LAN/Bonjour address when unreachable. Leave ballai_fallback_host empty
+# for Tailscale-only hosts.
 #
-# --- Bonjour / mDNS (optional) ---
-# Alternative: ansible_host=Marks-MacBook-Pro-2.local (see scutil --get LocalHostName on remote).
+# --- Shared machines ---
+# Set ballai_runner_shared_machine=true and ballai_runner_use_launchdaemon=true
+# in host_vars for machines shared with other users. Skips cask installs, network
+# tools, and uses a LaunchDaemon (runs at boot) instead of a LaunchAgent.
 #
-# --- Linux self-hosted (optional) ---
-# Add hosts with ansible_user set; Monolith installs packages + systemd there.
+# --- Passwords ---
+# Become passwords live in group_vars/all/vault.yml (ansible-vault encrypted).
+# Per-host overrides go in host_vars/<name>.yml (e.g. empty become password for
+# NOPASSWD sudo). The .vault-password-file decrypts automatically.
 #
 # --- mac_runners (legacy) ---
-# The play uses hosts: github_runners:mac_runners. Define [mac_runners] even when empty so Ansible
-# does not warn "Could not match supplied host pattern, ignoring: mac_runners".
+# The play uses hosts: github_runners:mac_runners. Define [mac_runners] even when empty.
 
 [mac_runners]
 
 [github_runners]
-localhost ansible_connection=local
-marks-runner ansible_host=192.168.1.51 ansible_user=ballew
-
-# Optional: second host only under mac_runners (still picked up by the union):
-# other ansible_host=10.0.0.12 ansible_user=you
+m1-mac-mini  ansible_host=m1.tail1b3be.ts.net        ansible_user=mballew
+ballew-4     ansible_host=bsl.tail1b3be.ts.net       ansible_user=ballew
+macbookpro   ansible_host=macbookpro.tail1b3be.ts.net ansible_user=ballew
