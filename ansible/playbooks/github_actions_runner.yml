@@ -43,11 +43,10 @@
     github_actions_runner_github_token_file: ""
     github_actions_runner_become_password_file: ""
     ballai_runner_install_ci_tools: "{{ github_actions_runner_install_ci_tools | default(true) | bool }}"
-    # Shared machines (e.g. another user's laptop): only install CI formulae, skip casks and
-    # network tools that could conflict with the primary user's setup. Never remove anything.
-    ballai_runner_shared_machine: "{{ ballai_runner_shared_machine | default(false) | bool }}"
-    # Use a LaunchDaemon (runs at boot as runner_user) instead of a LaunchAgent (needs desktop login).
-    ballai_runner_use_launchdaemon: "{{ ballai_runner_use_launchdaemon | default(false) | bool }}"
+    # Shared machines: set ballai_runner_shared_machine=true in host_vars to skip casks/network tools.
+    # LaunchDaemon: set ballai_runner_use_launchdaemon=true in host_vars for boot-time runner service.
+    _shared_machine: "{{ ballai_runner_shared_machine | default(false) | bool }}"
+    _use_launchdaemon: "{{ ballai_runner_use_launchdaemon | default(false) | bool }}"
     # Xcode and simulator setup.
     ballai_runner_install_xcode: "{{ github_actions_runner_install_xcode | default(true) | bool }}"
     ballai_runner_ios_simulator_platform: iOS
@@ -65,7 +64,7 @@
     # ── Tailscale → LAN fallback ────────────────────────────────────────
     - name: Probe Tailscale connectivity
       ansible.builtin.command:
-        cmd: "nc -z -w 5 {{ ballai_tailscale_host }} 22"
+        cmd: "timeout 10 nc -z -w 5 {{ ballai_tailscale_host }} 22"
       delegate_to: localhost
       connection: local
       register: _ts_probe
@@ -230,6 +229,7 @@
         PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
       register: _brew_cmd
       changed_when: false
+      check_mode: false
       become: false
       when: ansible_facts.system == 'Darwin'
       tags: [always]
@@ -288,7 +288,7 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
-        - not ballai_runner_shared_machine
+        - not _shared_machine
       tags: [ci-tools]
 
     - name: Ensure CI tool casks (macOS)
@@ -301,7 +301,7 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_ci_tools | bool
-        - not ballai_runner_shared_machine
+        - not _shared_machine
       tags: [ci-tools]
 
     # ── Xcode setup ──────────────────────────────────────────────────────
@@ -370,6 +370,10 @@
     - name: Download latest iOS simulator if missing
       ansible.builtin.command:
         cmd: "xcodebuild -downloadPlatform {{ ballai_runner_ios_simulator_platform }}"
+      register: _sim_download
+      failed_when:
+        - _sim_download.rc != 0
+        - "'Duplicate' not in _sim_download.stdout"
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_xcode | bool
@@ -378,7 +382,7 @@
           | selectattr('platform', 'equalto', 'iOS')
           | selectattr('isAvailable', 'equalto', true)
           | list | length == 0
-      changed_when: true
+      changed_when: _sim_download.rc == 0
       tags: [xcode]
 
     # ── LaunchDaemon for shared machines ─────────────────────────────────
@@ -392,7 +396,7 @@
       become: true
       when:
         - ansible_facts.system == 'Darwin'
-        - ballai_runner_use_launchdaemon | bool
+        - _use_launchdaemon
       notify: reload runner launchdaemon
       tags: [runner-service]
 
@@ -408,7 +412,7 @@
       become: true
       when:
         - ansible_facts.system == 'Darwin'
-        - ballai_runner_use_launchdaemon | bool
+        - _use_launchdaemon
       tags: [runner-service]
 
     - name: Ensure Android Homebrew formulae (macOS)
