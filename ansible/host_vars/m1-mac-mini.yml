@@ -1,4 +1,6 @@
 ---
 ballai_tailscale_host: m1.tail1b3be.ts.net
 ballai_fallback_host: m1.local
+ansible_ssh_pass: "{{ vault_become_password }}"
+ansible_ssh_common_args: "-o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive"
 ballai_runner_use_launchdaemon: true

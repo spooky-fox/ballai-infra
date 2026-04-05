@@ -244,6 +244,19 @@
       when: ansible_facts.system == 'Darwin'
       tags: [always]
 
+    - name: Ensure Homebrew is group-writable for admin users (shared machines)
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      become: true
+      loop:
+        - chgrp -R admin /opt/homebrew
+        - chmod -R g+w /opt/homebrew
+      changed_when: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - _shared_machine
+      tags: [always]
+
     - name: Ensure GNU tar formula (macOS) so ansible unarchive finds gtar
       community.general.homebrew:
         name: gnu-tar
@@ -318,11 +331,44 @@
       environment:
         PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] | default('') }}"
       become: true
+      register: _xcode_install
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_xcode | bool
         - not (_xcode_app.stat.exists | default(false))
-      changed_when: true
+      changed_when: "'Installed' in (_xcode_install.stdout | default(''))"
+      tags: [xcode]
+
+    - name: Verify Xcode.app exists after install attempt
+      ansible.builtin.stat:
+        path: /Applications/Xcode.app
+      register: _xcode_app_post
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+      tags: [xcode]
+
+    - name: Fail if Xcode is required but missing
+      ansible.builtin.fail:
+        msg: >-
+          Xcode.app is not installed and mas could not install it.
+          Install Xcode manually from the App Store (the logged-in user must be
+          signed into an Apple ID) then re-run the playbook.
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
+        - not (_xcode_app_post.stat.exists | default(false))
+      tags: [xcode]
+
+    - name: Check current xcode-select path
+      ansible.builtin.command:
+        cmd: xcode-select -p
+      register: _xcode_select_path
+      changed_when: false
+      become: false
+      when:
+        - ansible_facts.system == 'Darwin'
+        - ballai_runner_install_xcode | bool
       tags: [xcode]
 
     - name: Point xcode-select at Xcode.app
@@ -332,17 +378,18 @@
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_xcode | bool
-      changed_when: false
+        - _xcode_select_path.stdout != '/Applications/Xcode.app/Contents/Developer'
+      changed_when: true
       tags: [xcode]
 
     - name: Accept Xcode license
       ansible.builtin.command:
         cmd: xcodebuild -license accept
       become: true
+      changed_when: false
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_xcode | bool
-      changed_when: false
       tags: [xcode]
 
     - name: Run Xcode first launch setup
@@ -373,7 +420,7 @@
       register: _sim_download
       failed_when:
         - _sim_download.rc != 0
-        - "'Duplicate' not in _sim_download.stdout"
+        - "'Duplicate' not in (_sim_download.stdout | default(''))"
       when:
         - ansible_facts.system == 'Darwin'
         - ballai_runner_install_xcode | bool

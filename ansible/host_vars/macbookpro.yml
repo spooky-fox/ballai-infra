@@ -1,6 +1,8 @@
 ---
 ballai_tailscale_host: macbookpro.tail1b3be.ts.net
 ballai_fallback_host: ""
+ansible_ssh_pass: "{{ vault_become_password }}"
+ansible_ssh_common_args: "-o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive"
 ansible_become_password: ""
 ballai_runner_shared_machine: true
 ballai_runner_use_launchdaemon: true
