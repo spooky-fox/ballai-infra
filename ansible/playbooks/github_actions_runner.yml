@@ -415,6 +415,15 @@
         - _use_launchdaemon
       tags: [runner-service]
 
+    # ── Power management ─────────────────────────────────────────────────
+    - name: Prevent sleep on AC power (display blanks after 10 min)
+      ansible.builtin.command:
+        cmd: pmset -c displaysleep 10 sleep 0 disksleep 0 womp 1 networkoversleep 0
+      become: true
+      changed_when: false
+      when: ansible_facts.system == 'Darwin'
+      tags: [power]
+
     - name: Ensure Android Homebrew formulae (macOS)
       community.general.homebrew:
         name:
