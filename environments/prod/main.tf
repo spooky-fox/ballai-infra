@@ -1,3 +1,9 @@
+locals {
+  # Canonical secret is DUFFEL_API_TOKEN. Keep DUFFLE_API_KEY for compatibility while
+  # runtime and deployment paths converge on a single key name.
+  effective_duffel_token = trimspace(var.duffel_api_token) != "" ? var.duffel_api_token : var.duffle_api_key
+}
+
 module "ballai_worker" {
   source = "../../modules/ballai-worker"
 
@@ -16,7 +22,8 @@ module "ballai_worker" {
     TILLER_PERSONAL_SPREADSHEET_ID     = var.tiller_personal_spreadsheet_id
     TILLER_BUSINESS_SPREADSHEET_ID     = var.tiller_business_spreadsheet_id
     GENIUS_SCAN_FOLDER_ID              = var.genius_scan_folder_id
-    DUFFEL_API_TOKEN                   = var.duffel_api_token
+    DUFFEL_API_TOKEN                   = local.effective_duffel_token
+    DUFFLE_API_KEY                     = local.effective_duffel_token
   }
 }
 

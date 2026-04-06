@@ -99,3 +99,10 @@ variable "duffel_api_token" {
   type      = string
   sensitive = true
 }
+
+variable "duffle_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Legacy Duffel key input. If set, it is mirrored to DUFFLE_API_KEY and can also backfill DUFFEL_API_TOKEN."
+}
