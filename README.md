@@ -32,6 +32,13 @@ ansible/                        # Self-hosted GitHub Actions runners (macOS/Linu
 1. Map Ballai Wrangler resources to `modules/ballai-worker/` when ready.
 2. Keep `lanzo-web/infra/` retired and manage lanzo only from `environments/prod/lanzo-web/`.
 3. Run `terraform fmt`, `terraform validate`, and `terraform plan` from each root directory before apply.
+4. Add Cloudflare edge security policy resources (WAF/rulesets) for Ballai API once Worker resources are fully managed in Terraform. Today, Workers deploy via Wrangler; edge 1010-style access rules are not yet codified in this repo.
+
+## Duffel secret compatibility
+
+- Canonical Worker secret name: `DUFFEL_API_TOKEN`.
+- Transitional compatibility alias: `DUFFLE_API_KEY`.
+- `environments/prod/main.tf` mirrors both secret names to the same effective value so runtime code can resolve either key name safely.
 
 ## CI
 
