@@ -27,6 +27,18 @@ module "ballai_worker" {
   }
 }
 
+module "worker_oidc" {
+  source = "../../modules/worker-oidc-federation"
+
+  worker_url = "https://ballai-api.ballai.workers.dev"
+
+  tags = {
+    Project     = "ballai"
+    ManagedBy   = "terraform"
+    Environment = "prod"
+  }
+}
+
 module "github_actions_runners" {
   count  = var.enable_github_actions_runners ? 1 : 0
   source = "../../modules/github-actions-codebuild-runners"
