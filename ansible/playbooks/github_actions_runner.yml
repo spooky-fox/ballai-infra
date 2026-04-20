@@ -244,6 +244,14 @@
       when: ansible_facts.system == 'Darwin'
       tags: [always]
 
+    - name: Ensure Homebrew directories are owned by the runner user
+      ansible.builtin.command:
+        cmd: "chown -R {{ runner_user }} /opt/homebrew"
+      become: true
+      changed_when: false
+      when: ansible_facts.system == 'Darwin'
+      tags: [always]
+
     - name: Ensure Homebrew is group-writable for admin users (shared machines)
       ansible.builtin.command:
         cmd: "{{ item }}"
