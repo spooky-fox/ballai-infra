@@ -1,13 +1,13 @@
 output "vpc_id" {
-  value = module.vpc.vpc_id
+  value = aws_vpc.this.id
 }
 
 output "public_subnet_ids" {
-  value = module.vpc.public_subnets
+  value = aws_subnet.public[*].id
 }
 
 output "private_subnet_ids" {
-  value = module.vpc.private_subnets
+  value = aws_subnet.private[*].id
 }
 
 output "ecs_cluster_arn" {
@@ -19,19 +19,19 @@ output "ecs_cluster_name" {
 }
 
 output "alb_arn" {
-  value = module.alb.arn
+  value = aws_lb.this.arn
 }
 
 output "alb_dns_name" {
-  value = module.alb.dns_name
+  value = aws_lb.this.dns_name
 }
 
 output "alb_zone_id" {
-  value = module.alb.zone_id
+  value = aws_lb.this.zone_id
 }
 
 output "https_listener_arn" {
-  value = module.alb.listeners["https"].arn
+  value = aws_lb_listener.https.arn
 }
 
 output "ecs_security_group_id" {
@@ -39,7 +39,7 @@ output "ecs_security_group_id" {
 }
 
 output "acm_certificate_arn" {
-  value = module.acm.acm_certificate_arn
+  value = aws_acm_certificate.this.arn
 }
 
 output "neo4j_instance_id" {

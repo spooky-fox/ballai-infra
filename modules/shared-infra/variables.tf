@@ -57,7 +57,7 @@ variable "acm_san" {
 variable "route53_zone_id" {
   type        = string
   description = "Route53 zone ID for spookyfox.com (in chatresearch account)"
-  default     = ""
+  default     = "Z0174990BOLSPIKZLIBQ"
 }
 
 variable "ssm_parameters" {
