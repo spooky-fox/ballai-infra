@@ -147,7 +147,7 @@ resource "aws_ecs_service" "this" {
 
   network_configuration {
     subnets          = local.shared.public_subnet_ids
-    security_groups  = [local.shared.ecs_security_group_id]
+    security_groups  = [local.shared.ecs_tasks_security_group_id]
     assign_public_ip = true
   }
 
@@ -185,7 +185,7 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_listener_rule" "this" {
-  listener_arn = local.shared.https_listener_arn
+  listener_arn = local.shared.alb_https_listener_arn
   priority     = var.listener_priority
 
   action {
@@ -201,7 +201,7 @@ resource "aws_lb_listener_rule" "this" {
 }
 
 resource "aws_route53_record" "this" {
-  zone_id = var.route53_zone_id
+  zone_id = local.shared.route53_zone_id
   name    = var.host_header
   type    = "A"
 
@@ -236,7 +236,7 @@ resource "aws_cloudwatch_metric_alarm" "high_5xx" {
 
   dimensions = {
     TargetGroup  = aws_lb_target_group.this.arn_suffix
-    LoadBalancer = local.shared.alb_arn
+    LoadBalancer = local.shared.alb_arn_suffix
   }
 }
 
@@ -254,7 +254,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_hosts" {
 
   dimensions = {
     TargetGroup  = aws_lb_target_group.this.arn_suffix
-    LoadBalancer = local.shared.alb_arn
+    LoadBalancer = local.shared.alb_arn_suffix
   }
 }
 
