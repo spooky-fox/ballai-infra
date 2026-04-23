@@ -1,0 +1,26 @@
+base_path: ""
+
+components:
+  terraform:
+    base_path: "modules"
+    apply_auto_approve: false
+    deploy_run_init: true
+    init_run_reconfigure: true
+    auto_generate_backend_file: true
+
+stacks:
+  base_path: "stacks"
+  included_paths:
+    - "orgs/**/*"
+  excluded_paths:
+    - "**/_defaults.yaml"
+    - "catalog/**/*"
+    - "mixins/**/*"
+  name_template: "{{.vars.namespace}}-{{.vars.environment}}-{{.vars.stage}}"
+
+vendor:
+  base_path: ""
+
+logs:
+  file: "/dev/stderr"
+  level: Info

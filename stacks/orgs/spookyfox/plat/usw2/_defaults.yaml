@@ -1,0 +1,18 @@
+import:
+  - orgs/spookyfox/_defaults
+
+vars:
+  environment: usw2
+  stage: prod
+  region: us-west-2
+
+terraform:
+  backend_type: s3
+  backend:
+    s3:
+      encrypt: true
+      bucket: "terraform-spookyfox"
+      region: "us-east-1"
+      key: "terraform.tfstate"
+      use_lockfile: true
+      workspace_key_prefix: "ballai-infra"

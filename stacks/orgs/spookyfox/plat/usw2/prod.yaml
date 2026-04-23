@@ -1,0 +1,16 @@
+import:
+  - orgs/spookyfox/plat/usw2/_defaults
+
+components:
+  terraform:
+    ballai-worker:
+      vars: {}
+
+    worker-oidc-federation:
+      vars:
+        worker_url: "https://ballai-api.ballai.workers.dev"
+
+    github-actions-codebuild-runners:
+      vars:
+        enable_github_actions_runners: true
+        github_owner: "spooky-fox"
