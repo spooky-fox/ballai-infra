@@ -14,3 +14,21 @@ components:
       vars:
         enable_github_actions_runners: true
         github_owner: "spooky-fox"
+
+    shared-infra:
+      backend:
+        s3:
+          key: "shared-infra/terraform.tfstate"
+      vars: {}
+
+    service-agent-memory:
+      backend:
+        s3:
+          key: "service-agent-memory/terraform.tfstate"
+      vars: {}
+
+    service-phoenix:
+      backend:
+        s3:
+          key: "service-phoenix/terraform.tfstate"
+      vars: {}

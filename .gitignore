@@ -37,3 +37,5 @@ ansible/group_vars/all/vault.yml
 .DS_Store
 *.swp
 .idea/
+*.planfile
+**/.terraform/

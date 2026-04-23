@@ -308,7 +308,7 @@ resource "aws_dlm_lifecycle_policy" "neo4j_snapshots" {
 resource "aws_ssm_parameter" "neo4j_password" {
   name  = "/spookyfox/shared/neo4j-password"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "neo4j_password", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
@@ -318,7 +318,7 @@ resource "aws_ssm_parameter" "neo4j_password" {
 resource "aws_ssm_parameter" "together_api_key" {
   name  = "/spookyfox/shared/together-api-key"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "together_api_key", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
@@ -328,7 +328,7 @@ resource "aws_ssm_parameter" "together_api_key" {
 resource "aws_ssm_parameter" "mcp_auth_token" {
   name  = "/spookyfox/services/agent-memory/mcp-auth-token"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "mcp_auth_token", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
@@ -338,7 +338,7 @@ resource "aws_ssm_parameter" "mcp_auth_token" {
 resource "aws_ssm_parameter" "phoenix_secret" {
   name  = "/spookyfox/services/phoenix/secret"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "phoenix_secret", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
@@ -348,7 +348,7 @@ resource "aws_ssm_parameter" "phoenix_secret" {
 resource "aws_ssm_parameter" "phoenix_admin_password" {
   name  = "/spookyfox/services/phoenix/admin-password"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "phoenix_admin_password", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
@@ -358,7 +358,7 @@ resource "aws_ssm_parameter" "phoenix_admin_password" {
 resource "aws_ssm_parameter" "phoenix_api_key" {
   name  = "/spookyfox/services/phoenix/api-key"
   type  = "SecureString"
-  value = lookup(var.ssm_parameters, "phoenix_api_key", { value = "PLACEHOLDER" }).value
+  value = "PLACEHOLDER"
 
   lifecycle {
     ignore_changes = [value]
