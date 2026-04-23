@@ -1,0 +1,514 @@
+{
+    "widgets": [
+        {
+            "height": 1,
+            "properties": {
+                "markdown": "# Agent Memory -- Operational Dashboard"
+            },
+            "type": "text",
+            "width": 24,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ApplicationELB",
+                        "HealthyHostCount",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f"
+                    ]
+                ],
+                "period": 60,
+                "region": "us-west-2",
+                "stat": "Minimum",
+                "title": "Healthy Hosts",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 6,
+            "x": 0,
+            "y": 1
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ApplicationELB",
+                        "RequestCount",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f"
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "stat": "Sum",
+                "title": "ALB Request Count",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 6,
+            "x": 6,
+            "y": 1
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ApplicationELB",
+                        "TargetResponseTime",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f",
+                        {
+                            "label": "p50",
+                            "stat": "p50"
+                        }
+                    ],
+                    [
+                        "AWS/ApplicationELB",
+                        "TargetResponseTime",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f",
+                        {
+                            "label": "p99",
+                            "stat": "p99"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "title": "ALB Target Response Time (p50 / p99)",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 6,
+            "x": 12,
+            "y": 1
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ApplicationELB",
+                        "HTTPCode_Target_4XX_Count",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f",
+                        {
+                            "label": "4xx"
+                        }
+                    ],
+                    [
+                        "AWS/ApplicationELB",
+                        "HTTPCode_Target_5XX_Count",
+                        "TargetGroup",
+                        "targetgroup/mem-20260315192424182000000003/442bd7535a496efb",
+                        "LoadBalancer",
+                        "app/spookyfox-shared/a5d4c28cc9c5d58f",
+                        {
+                            "label": "5xx"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "stat": "Sum",
+                "title": "HTTP Errors (4xx / 5xx)",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 6,
+            "x": 18,
+            "y": 1
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ECS",
+                        "CPUUtilization",
+                        "ServiceName",
+                        "agent-memory",
+                        "ClusterName",
+                        "spookyfox-shared"
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "stat": "Average",
+                "title": "ECS CPU Utilization",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 0,
+            "y": 7
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AWS/ECS",
+                        "MemoryUtilization",
+                        "ServiceName",
+                        "agent-memory",
+                        "ClusterName",
+                        "spookyfox-shared"
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "stat": "Average",
+                "title": "ECS Memory Utilization",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 8,
+            "y": 7
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "ECS/ContainerInsights",
+                        "RunningTaskCount",
+                        "ServiceName",
+                        "agent-memory",
+                        "ClusterName",
+                        "spookyfox-shared"
+                    ]
+                ],
+                "period": 60,
+                "region": "us-west-2",
+                "stat": "Average",
+                "title": "ECS Running Task Count",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 16,
+            "y": 7
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "Latency",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "search p50",
+                            "stat": "p50"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Latency",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "search p99",
+                            "stat": "p99"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Latency",
+                        "ToolName",
+                        "memory_add",
+                        {
+                            "label": "add p50",
+                            "stat": "p50"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Latency",
+                        "ToolName",
+                        "memory_add",
+                        {
+                            "label": "add p99",
+                            "stat": "p99"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "title": "Tool Call Latency (p50 / p99)",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 0,
+            "y": 13
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "Invocations",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "search",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Invocations",
+                        "ToolName",
+                        "memory_search_nodes",
+                        {
+                            "label": "search_nodes",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Invocations",
+                        "ToolName",
+                        "memory_add",
+                        {
+                            "label": "add",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Invocations",
+                        "ToolName",
+                        "memory_episodes",
+                        {
+                            "label": "episodes",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "Invocations",
+                        "ToolName",
+                        "memory_status",
+                        {
+                            "label": "status",
+                            "stat": "Sum"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "title": "Tool Invocations by Type",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 8,
+            "y": 13
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "ErrorCount",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "search errors",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "ErrorCount",
+                        "ToolName",
+                        "memory_add",
+                        {
+                            "label": "add errors",
+                            "stat": "Sum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "RejectedRequests",
+                        "Component",
+                        "Auth",
+                        {
+                            "label": "auth rejections",
+                            "stat": "Sum"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "title": "Tool Errors + Auth Rejections",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 8,
+            "x": 16,
+            "y": 13
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "EpisodeCount",
+                        "Component",
+                        "KnowledgeGraph",
+                        {
+                            "label": "Episodes",
+                            "stat": "Maximum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "EntityCount",
+                        "Component",
+                        "KnowledgeGraph",
+                        {
+                            "label": "Entities",
+                            "stat": "Maximum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "FactCount",
+                        "Component",
+                        "KnowledgeGraph",
+                        {
+                            "label": "Facts",
+                            "stat": "Maximum"
+                        }
+                    ]
+                ],
+                "period": 3600,
+                "region": "us-west-2",
+                "title": "Knowledge Graph Size",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 12,
+            "x": 0,
+            "y": 19
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "FactCount",
+                        "Component",
+                        "KnowledgeGraph",
+                        {
+                            "label": "Active Facts",
+                            "stat": "Maximum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "InvalidFactCount",
+                        "Component",
+                        "KnowledgeGraph",
+                        {
+                            "label": "Superseded Facts",
+                            "stat": "Maximum"
+                        }
+                    ]
+                ],
+                "period": 3600,
+                "region": "us-west-2",
+                "title": "Fact Supersession (Active vs Invalid)",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 12,
+            "x": 12,
+            "y": 19
+        },
+        {
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [
+                        "AgentMemory",
+                        "ResultCount",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "avg results",
+                            "stat": "Average"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "ResultCount",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "min results",
+                            "stat": "Minimum"
+                        }
+                    ],
+                    [
+                        "AgentMemory",
+                        "ResultCount",
+                        "ToolName",
+                        "memory_search",
+                        {
+                            "label": "max results",
+                            "stat": "Maximum"
+                        }
+                    ]
+                ],
+                "period": 300,
+                "region": "us-west-2",
+                "title": "Search Result Count Distribution",
+                "view": "timeSeries"
+            },
+            "type": "metric",
+            "width": 12,
+            "x": 0,
+            "y": 25
+        },
+        {
+            "height": 6,
+            "properties": {
+                "query": "SOURCE '/ecs/agent-memory' | fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20",
+                "region": "us-west-2",
+                "title": "Recent Errors",
+                "view": "table"
+            },
+            "type": "log",
+            "width": 12,
+            "x": 12,
+            "y": 25
+        }
+    ]
+}
