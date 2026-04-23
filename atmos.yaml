@@ -2,6 +2,7 @@ base_path: ""
 
 components:
   terraform:
+    command: tofu
     base_path: "modules"
     apply_auto_approve: false
     deploy_run_init: true
