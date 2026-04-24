@@ -49,3 +49,11 @@ output "neo4j_instance_id" {
 output "neo4j_private_ip" {
   value = aws_instance.neo4j.private_ip
 }
+
+output "route53_zone_id" {
+  value = var.route53_zone_id
+}
+
+output "alb_arn_suffix" {
+  value = aws_lb.this.arn_suffix
+}
