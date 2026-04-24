@@ -1,20 +1,20 @@
 import:
   - orgs/spookyfox/plat/usw2/_defaults
 
+# ──────────────────────────────────────────────────────────────────────
+# Component ownership split (see issue #27)
+#
+# Legacy path (environments/prod/) — managed by CI (GitHub Actions):
+#   - ballai-worker
+#   - worker-oidc-federation
+#   - github-actions-codebuild-runners
+#
+# Those components are NOT declared here to avoid dual-management.
+# They will move into this Atmos stack once CI is migrated.
+# ──────────────────────────────────────────────────────────────────────
+
 components:
   terraform:
-    ballai-worker:
-      vars: {}
-
-    worker-oidc-federation:
-      vars:
-        worker_url: "https://ballai-api.ballai.workers.dev"
-
-    github-actions-codebuild-runners:
-      vars:
-        enable_github_actions_runners: true
-        github_owner: "spooky-fox"
-
     shared-infra:
       backend:
         s3:
