@@ -57,3 +57,13 @@ output "route53_zone_id" {
 output "alb_arn_suffix" {
   value = aws_lb.this.arn_suffix
 }
+
+output "alb_https_listener_arn" {
+  value       = aws_lb_listener.https.arn
+  description = "ARN of the HTTPS listener (alias for https_listener_arn)"
+}
+
+output "ecs_tasks_security_group_id" {
+  value       = aws_security_group.ecs_tasks.id
+  description = "Security group ID for ECS tasks (alias for ecs_security_group_id)"
+}
