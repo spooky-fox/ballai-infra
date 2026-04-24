@@ -5,7 +5,7 @@ locals {
 }
 
 module "ballai_worker" {
-  source = "../../modules/ballai-worker"
+  source = "../../components/terraform/ballai-worker"
 
   name_prefix = var.name_prefix
   account_id  = var.cloudflare_account_id
@@ -28,7 +28,7 @@ module "ballai_worker" {
 }
 
 module "worker_oidc" {
-  source = "../../modules/worker-oidc-federation"
+  source = "../../components/terraform/worker-oidc-federation"
 
   worker_url = "https://ballai-api.ballai.workers.dev"
 
@@ -41,7 +41,7 @@ module "worker_oidc" {
 
 module "github_actions_runners" {
   count  = var.enable_github_actions_runners ? 1 : 0
-  source = "../../modules/github-actions-codebuild-runners"
+  source = "../../components/terraform/github-actions-codebuild-runners"
 
   name_prefix           = "${var.name_prefix}-gha"
   github_owner          = var.github_owner
