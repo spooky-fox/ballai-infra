@@ -1,9 +1,11 @@
 data "terraform_remote_state" "shared" {
-  backend = "s3"
+  backend   = "s3"
+  workspace = "ballai-usw2-prod"
   config = {
-    bucket = "terraform-spookyfox"
-    key    = "shared"
-    region = "us-east-1"
+    bucket               = "terraform-spookyfox"
+    key                  = "shared-infra/terraform.tfstate"
+    region               = "us-east-1"
+    workspace_key_prefix = "ballai-infra"
   }
 }
 
